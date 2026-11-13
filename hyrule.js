@@ -1,115 +1,103 @@
-/* Hyrule Adventure System — independent Zelda progression layer */
+/* Hyrule Command Center — real-life planning and Zelda-inspired progression */
 (function(){
-  const defaults={orbEvents:[],quests:[],dungeons:[],medals:[],unlocks:{},notes:""};
-  db.hyrule=Object.assign({},defaults,db.hyrule||{});
-  Object.keys(defaults).forEach(k=>{if(db.hyrule[k]===undefined)db.hyrule[k]=defaults[k]});
+  const H = db.hyrule = Object.assign({
+    orbEvents:[], quests:[], projects:[], badges:[], rewards:[], memories:[], lists:[]
+  }, db.hyrule || {});
+  ["orbEvents","quests","projects","badges","rewards","memories","lists"].forEach(k=>{if(!Array.isArray(H[k]))H[k]=[]});
   const $=id=>document.getElementById(id);
-  const escH=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const orbTotal=()=>db.hyrule.orbEvents.reduce((n,x)=>n+(+x.amount||0),0);
-  const heroLevel=()=>Math.floor(orbTotal()/100)+1;
-  const nextLevel=()=>orbTotal()%100;
+  const safe=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const id=()=>crypto.randomUUID();
+  const total=()=>H.orbEvents.reduce((n,x)=>n+(+x.amount||0),0);
+  const level=()=>Math.floor(total()/100)+1;
+  const progress=()=>total()%100;
+  const categories=["Daily Life","Work","Health & Wellness","Home","Personal Growth","Fun & Hobbies"];
+  const badgeRules=[
+    {id:"first-steps",name:"First Steps",icon:"🌱",desc:"Complete your first real-life quest",test:()=>H.quests.some(x=>x.done)},
+    {id:"getting-it-done",name:"Getting It Done",icon:"⚒️",desc:"Complete 10 real-life quests",test:()=>H.quests.filter(x=>x.done).length>=10},
+    {id:"big-adventure",name:"A Big Adventure",icon:"🗺️",desc:"Finish your first main quest",test:()=>H.projects.some(x=>x.done)},
+    {id:"steady-hand",name:"Steady Hand",icon:"🏹",desc:"Complete 25 real-life quests",test:()=>H.quests.filter(x=>x.done).length>=25},
+    {id:"memory-maker",name:"Memory Maker",icon:"📖",desc:"Record 5 moments or milestones",test:()=>H.memories.length>=5},
+    {id:"treasure-hunter",name:"Treasure Hunter",icon:"🏆",desc:"Redeem your first reward",test:()=>H.rewards.some(x=>x.redeemed>0)},
+    {id:"well-rounded",name:"Well-Rounded Hero",icon:"🌟",desc:"Complete quests in 4 different life areas",test:()=>new Set(H.quests.filter(x=>x.done).map(x=>x.category)).size>=4}
+  ];
+  function checkBadges(){
+    badgeRules.forEach(b=>{if(b.test()&&!H.badges.some(x=>x.id===b.id)){H.badges.unshift({id:b.id,name:b.name,icon:b.icon,desc:b.desc,date:new Date().toISOString()})}});
+  }
   function award(amount,reason){
     amount=Math.max(0,Math.min(500,+amount||0));if(!amount)return;
-    db.hyrule.orbEvents.unshift({id:crypto.randomUUID(),amount,reason:String(reason||'Adventure progress').trim(),date:new Date().toISOString()});
-    save();
+    H.orbEvents.unshift({id:id(),amount,reason:String(reason||"A little progress").trim(),date:new Date().toISOString()});
+    checkBadges();save();
   }
-  function questDone(id){
-    const q=db.hyrule.quests.find(x=>x.id===id);if(!q||q.done)return;
-    q.done=true;q.completedAt=new Date().toISOString();award(q.reward||10,'Quest complete: '+q.name);render();
+  function status(){
+    const done=H.quests.filter(x=>x.done).length,open=H.quests.filter(x=>!x.done).length;
+    return '<section class="panel s12 hyrule-status"><div class="hyrule-status-head"><div><div class="eyebrow">YOUR ADVENTURE, YOUR PACE</div><h2>HERO LEVEL '+level()+'</h2><p class="muted">'+total().toLocaleString()+' SPIRIT ORBS EARNED</p></div><div class="hyrule-triforce">△</div></div><div class="hyrule-orbbar"><span style="width:'+progress()+'%"></span></div><div class="row between"><small class="muted">'+progress()+' / 100 to next level</small><small class="muted">'+done+' quests complete · '+open+' still ahead</small></div></section>';
   }
-  function addQuest(e){
-    e.preventDefault();const f=e.target,name=f.name.value.trim();if(!name)return;
-    db.hyrule.quests.unshift({id:crypto.randomUUID(),name,region:f.region.value.trim(),reward:Math.max(0,Math.min(100,+f.reward.value||10)),done:false,createdAt:new Date().toISOString()});
-    save();render();
+  function tile(key,icon,title,sub){
+    return '<button class="module hyrule-module" onclick="go(\''+key+'\')"><i>'+icon+'</i><b>'+title+'</b><small>'+sub+'</small></button>';
   }
-  function addDungeon(e){
-    e.preventDefault();const f=e.target,name=f.name.value.trim();if(!name)return;
-    db.hyrule.dungeons.unshift({id:crypto.randomUUID(),name,region:f.region.value.trim(),boss:f.boss.value.trim(),notes:f.notes.value.trim(),cleared:false,createdAt:new Date().toISOString()});
-    save();render();
-  }
-  function clearDungeon(id){
-    const d=db.hyrule.dungeons.find(x=>x.id===id);if(!d||d.cleared)return;
-    d.cleared=true;d.clearedAt=new Date().toISOString();
-    db.hyrule.medals.unshift({id:crypto.randomUUID(),name:d.name,region:d.region,date:d.clearedAt});
-    award(50,'Dungeon cleared: '+d.name);render();
-  }
-  function heroStatus(){
-    const done=db.hyrule.quests.filter(q=>q.done).length,open=db.hyrule.quests.filter(q=>!q.done).length;
-    const cleared=db.hyrule.dungeons.filter(d=>d.cleared).length;
-    return '<section class="panel s12 hyrule-status"><div class="hyrule-status-head"><div><div class="eyebrow">HYRULE ADVENTURE RECORD</div><h2>HERO LEVEL '+heroLevel()+'</h2><p class="muted">'+orbTotal().toLocaleString()+' SPIRIT ORBS EARNED</p></div><div class="hyrule-triforce">△</div></div><div class="hyrule-orbbar"><span style="width:'+nextLevel()+'%"></span></div><div class="row between"><small class="muted">'+nextLevel()+' / 100 to next level</small><small class="muted">'+done+' quests complete · '+open+' active · '+cleared+' dungeons cleared</small></div></section>';
-  }
-  function dashboard(){
-    const original=window.home();
-    const recent=db.hyrule.orbEvents.slice(0,3).map(x=>'<div class="stat"><span>'+escH(x.reason)+'</span><b>+'+x.amount+' orbs</b></div>').join('')||'<p class="muted">Your adventure begins here.</p>';
-    return heroStatus()+'<div class="grid">'+
-      '<section class="panel s6"><h3>ACTIVE ADVENTURE QUESTS</h3>'+db.hyrule.quests.filter(q=>!q.done).slice(0,4).map(q=>'<div class="stat"><span>'+escH(q.name)+'</span><b>'+q.reward+' ◈</b></div>').join('')+'<button class="btn" onclick="go(\'hyruleQuests\')">Open quest log</button></section>'+
-      '<section class="panel s6"><h3>RECENT SPIRIT ORBS</h3>'+recent+'</section></div>'+original;
+  function homeExtras(){
+    const recent=H.orbEvents.slice(0,3).map(x=>'<div class="stat"><span>'+safe(x.reason)+'</span><b>+'+x.amount+' orbs</b></div>').join("")||'<p class="muted">Your first reward is waiting for a meaningful win.</p>';
+    const badges=H.badges.slice(0,4).map(x=>'<span class="tag">'+x.icon+' '+safe(x.name)+'</span>').join("")||'<p class="muted">Your first achievement is waiting.</p>';
+    return status()+
+      '<div class="grid"><section class="panel s6"><h3>RECENT REWARDS</h3>'+recent+'</section><section class="panel s6"><h3>MEDALS & ACHIEVEMENTS</h3>'+badges+'<p><button class="btn" onclick="go(\'hyruleAchievements\')">View achievement case</button></p></section></div>'+
+      '<div class="modulegrid">'+
+      tile("hyruleQuests","⚔","Quest Log","Everyday tasks and goals")+
+      tile("hyruleProjects","🗺️","Main Quests","Bigger projects, one step at a time")+
+      tile("hyruleAchievements","🏅","Hero’s Journey","Badges and milestones")+
+      tile("hyruleRewards","🎁","Treasure Chest","Rewards worth working toward")+
+      tile("hyruleLists","🎒","Personal Lists","Shopping, packing and useful lists")+
+      tile("hyruleMemories","📖","Memory Book","Moments, wins and experiences")+
+      '</div>';
   }
   function questsPage(){
-    return '<div class="grid"><section class="panel s6"><h3>ADD A SIDE QUEST</h3><form id="hyruleQuestForm"><label>Quest name</label><input name="name" required maxlength="90" placeholder="e.g. Take a proper lunch break"><label>Region / category</label><input name="region" placeholder="Village, home, work..."><label>Spirit Orb reward</label><input name="reward" type="number" min="0" max="100" value="10"><button class="btn gold">Add quest</button></form></section><section class="panel s6"><h3>QUEST REWARDS</h3><p class="muted">Complete everyday tasks and earn Spirit Orbs. Rewards are motivation, not a score of your worth.</p><div class="stat"><span>Quick quest</span><b>10 orbs</b></div><div class="stat"><span>Big quest</span><b>25 orbs</b></div><div class="stat"><span>Major milestone</span><b>50 orbs</b></div></section><section class="panel s12"><h3>ADVENTURE LOG</h3>'+db.hyrule.quests.map(q=>'<div class="hyrule-item"><div><b>'+escH(q.name)+'</b><small>'+escH(q.region||'Hyrule')+' · '+(q.done?'COMPLETED':'ACTIVE')+'</small></div><div class="row">'+(q.done?'<span class="tag">+'+q.reward+' ◈</span>':'<button class="btn gold" onclick="hyruleCompleteQuest(\''+q.id+'\')">Complete · +'+q.reward+' ◈</button>')+'<button class="btn danger" onclick="hyruleDeleteQuest(\''+q.id+'\')">×</button></div></div>').join('')||'<p class="muted">No quests yet. Add the first one above.</p>'+'</section></div>';
+    const items=H.quests.map(q=>'<div class="hyrule-item"><div><b>'+safe(q.name)+'</b><small>'+safe(q.category)+' · '+(q.done?'COMPLETED':'OPEN')+' · '+q.reward+' Spirit Orbs</small>'+(q.notes?'<p class="muted">'+safe(q.notes)+'</p>':'')+'</div><div class="row">'+(q.done?'<span class="tag">✓ DONE</span>':'<button class="btn gold" onclick="hyruleFinishQuest(\''+q.id+'\')">Complete</button>')+'<button class="btn danger" onclick="hyruleRemove(\'quests\',\''+q.id+'\')">×</button></div></div>').join("")||'<p class="muted">Nothing on the quest log yet. Add a task or goal below.</p>';
+    return '<div class="grid"><section class="panel s6"><h3>ADD A QUEST</h3><form id="hyruleQuestForm"><label>Task or goal</label><input name="name" required maxlength="100" placeholder="Something you actually want to get done"><label>Life area</label><select name="category">'+categories.map(x=>'<option>'+x+'</option>').join("")+'</select><label>Importance</label><select name="level"><option value="5">Small win · 5 orbs</option><option value="10" selected>Worthwhile task · 10 orbs</option><option value="20">Big effort · 20 orbs</option></select><label>Notes (optional)</label><input name="notes" maxlength="140" placeholder="Anything to remember"><button class="btn gold">Add to quest log</button></form></section><section class="panel s6"><h3>HOW REWARDS WORK</h3><p class="muted">Spirit Orbs are for progress that matters. Tiny routine actions do not need to become another chore. Choose the reward level honestly.</p><div class="stat"><span>Small win</span><b>5 orbs</b></div><div class="stat"><span>Worthwhile task</span><b>10 orbs</b></div><div class="stat"><span>Big effort</span><b>20 orbs</b></div></section><section class="panel s12"><h3>YOUR QUEST LOG</h3>'+items+'</section></div>';
   }
-  function dungeonsPage(){
-    return '<div class="grid"><section class="panel s6"><h3>REGISTER A DUNGEON</h3><form id="hyruleDungeonForm"><label>Dungeon / challenge</label><input name="name" required placeholder="Name your challenge"><label>Region</label><input name="region" placeholder="Hyrule Field, home, work..."><label>Boss / final milestone</label><input name="boss" placeholder="Optional"><label>Notes / objectives</label><textarea name="notes" placeholder="What needs to happen before this is cleared?"></textarea><button class="btn gold">Register dungeon</button></form></section><section class="panel s6"><h3>MEDALS OF HONOR</h3>'+db.hyrule.medals.map(m=>'<div class="hyrule-item"><div><b>✧ '+escH(m.name)+'</b><small>'+escH(m.region||'Hyrule')+' · '+new Date(m.date).toLocaleDateString()+'</small></div><span class="tag">CLEARED</span></div>').join('')||'<p class="muted">Your medal case is waiting for its first victory.</p>'+'</section><section class="panel s12"><h3>DUNGEON JOURNAL</h3>'+db.hyrule.dungeons.map(d=>'<div class="hyrule-item"><div><b>'+escH(d.name)+'</b><small>'+escH(d.region||'Hyrule')+(d.boss?' · Final challenge: '+escH(d.boss):'')+'</small>'+(d.notes?'<p class="muted">'+escH(d.notes)+'</p>':'')+'</div>'+(d.cleared?'<span class="tag">CLEARED</span>':'<button class="btn gold" onclick="hyruleClearDungeon(\''+d.id+'\')">Clear dungeon · +50 ◈</button>')+'</div>').join('')||'<p class="muted">No dungeons registered yet.</p>'+'</section></div>';
+  function projectsPage(){
+    const items=H.projects.map(p=>'<div class="hyrule-item"><div><b>'+safe(p.name)+'</b><small>'+safe(p.category)+' · '+(p.done?'COMPLETED':'IN PROGRESS')+'</small>'+(p.notes?'<p class="muted">'+safe(p.notes)+'</p>':'')+'</div><div class="row">'+(p.done?'<span class="tag">✓ COMPLETE</span>':'<button class="btn gold" onclick="hyruleFinishProject(\''+p.id+'\')">Finish · +40</button>')+'<button class="btn danger" onclick="hyruleRemove(\'projects\',\''+p.id+'\')">×</button></div></div>').join("")||'<p class="muted">No main quests yet. Save this space for projects that take more than one sitting.</p>';
+    return '<div class="grid"><section class="panel s6"><h3>START A MAIN QUEST</h3><form id="hyruleProjectForm"><label>Project or bigger goal</label><input name="name" required maxlength="100" placeholder="A goal with a few steps"><label>Life area</label><select name="category">'+categories.map(x=>'<option>'+x+'</option>').join("")+'</select><label>First steps / notes</label><textarea name="notes" placeholder="What needs to happen?"></textarea><button class="btn gold">Start main quest</button></form></section><section class="panel s6"><h3>THE LONG GAME</h3><p class="muted">Use Main Quests for things that need planning: a home project, a savings goal, a trip, a course, or a personal goal. Finishing one earns 40 Spirit Orbs.</p><div class="big">'+H.projects.filter(x=>x.done).length+'</div><p class="muted">Main quests completed</p></section><section class="panel s12"><h3>ACTIVE & COMPLETED PROJECTS</h3>'+items+'</section></div>';
   }
-  function inventoryPage(){
-    const earned=orbTotal(),spent=db.hyrule.orbEvents.filter(x=>x.amount<0).reduce((n,x)=>n-x.amount,0);
-    return '<div class="grid">'+
-      '<section class="panel s6"><h3>SPIRIT ORB COLLECTION</h3><div class="big">'+earned+'</div><p class="muted">Lifetime Spirit Orbs · Hero Level '+heroLevel()+'</p><div class="hyrule-orbbar"><span style="width:'+nextLevel()+'%"></span></div><p class="muted">'+(100-nextLevel())+' orbs until the next level.</p></section>'+
-      '<section class="panel s6"><h3>LOG A MILESTONE</h3><form id="hyruleOrbForm"><label>What did you accomplish?</label><input name="reason" required placeholder="A real-world victory"><label>Spirit Orbs</label><input name="amount" type="number" min="1" max="500" value="10"><button class="btn gold">Collect Spirit Orbs</button></form></section>'+
-      '<section class="panel s12"><h3>INVENTORY / REWARD HISTORY</h3>'+db.hyrule.orbEvents.map(x=>'<div class="stat"><span>'+escH(x.reason)+' <small class="muted">'+new Date(x.date).toLocaleDateString()+'</small></span><b>+'+x.amount+' ◈</b></div>').join('')||'<p class="muted">No Spirit Orbs collected yet.</p>'+'</section></div>';
+  function achievementsPage(){
+    checkBadges();
+    const earned=H.badges.map(b=>'<div class="hyrule-item"><div><b>'+b.icon+' '+safe(b.name)+'</b><small>'+safe(b.desc)+' · '+new Date(b.date).toLocaleDateString()+'</small></div><span class="tag">EARNED</span></div>').join("")||'<p class="muted">No medals yet. They unlock naturally as you make progress.</p>';
+    const locked=badgeRules.filter(b=>!H.badges.some(x=>x.id===b.id)).map(b=>'<div class="hyrule-item"><div><b>◇ '+safe(b.name)+'</b><small>'+safe(b.desc)+'</small></div><span class="tag">LOCKED</span></div>').join("");
+    const memories=H.memories.length;
+    return '<div class="grid"><section class="panel s6"><h3>HERO LEVEL</h3><div class="big">'+level()+'</div><p class="muted">'+total()+' total Spirit Orbs · '+progress()+'/100 toward next level</p><div class="hyrule-orbbar"><span style="width:'+progress()+'%"></span></div></section><section class="panel s6"><h3>YOUR RECORD</h3><div class="stat"><span>Quests completed</span><b>'+H.quests.filter(x=>x.done).length+'</b></div><div class="stat"><span>Main quests completed</span><b>'+H.projects.filter(x=>x.done).length+'</b></div><div class="stat"><span>Moments recorded</span><b>'+memories+'</b></div><div class="stat"><span>Medals earned</span><b>'+H.badges.length+'</b></div></section><section class="panel s12"><h3>MEDAL CASE · EARNED</h3>'+earned+'</section><section class="panel s12"><h3>ON THE HORIZON</h3>'+locked+'</section></div>';
   }
-  function bindHyrule(){
-    const q=$('hyruleQuestForm');if(q)q.onsubmit=addQuest;
-    const d=$('hyruleDungeonForm');if(d)d.onsubmit=addDungeon;
-    const o=$('hyruleOrbForm');if(o)o.onsubmit=e=>{e.preventDefault();award(+e.target.amount.value,e.target.reason.value);render()};
+  function rewardsPage(){
+    const available=H.rewards.filter(x=>!x.archived).map(r=>'<div class="hyrule-item"><div><b>🎁 '+safe(r.name)+'</b><small>'+r.cost+' Spirit Orbs · Redeemed '+(r.redeemed||0)+' times</small></div><div class="row"><button class="btn gold" onclick="hyruleRedeem(\''+r.id+'\')" '+(total()<r.cost?'disabled':'')+'>Redeem</button><button class="btn danger" onclick="hyruleRemove(\'rewards\',\''+r.id+'\')">×</button></div></div>').join("")||'<p class="muted">Add a reward you would genuinely enjoy. Keep it realistic.</p>';
+    return '<div class="grid"><section class="panel s6"><h3>SPIRIT ORB BALANCE</h3><div class="big">'+total()+'</div><p class="muted">Earned and available to spend</p></section><section class="panel s6"><h3>ADD A TREASURE</h3><form id="hyruleRewardForm"><label>Reward</label><input name="name" required maxlength="90" placeholder="A small treat, outing or something saved for"><label>Orb cost</label><input name="cost" type="number" min="1" max="5000" value="50" required><button class="btn gold">Add to treasure chest</button></form></section><section class="panel s12"><h3>REWARDS TO UNLOCK</h3>'+available+'</section><section class="panel s12"><h3>SPIRIT ORB HISTORY</h3>'+H.orbEvents.slice(0,20).map(x=>'<div class="stat"><span>'+safe(x.reason)+' <small class="muted">'+new Date(x.date).toLocaleDateString()+'</small></span><b>'+(x.amount>0?'+':'')+x.amount+' ◈</b></div>').join("")+'</section></div>';
   }
-  window.hyruleCompleteQuest=questDone;
-  window.hyruleClearDungeon=clearDungeon;
-  window.hyruleDeleteQuest=id=>{if(!confirm('Remove this quest?'))return;db.hyrule.quests=db.hyrule.quests.filter(q=>q.id!==id);save();render()};
-  const pagesToAdd=[['hyruleQuests','⚔','Quest Log'],['hyruleDungeons','◇','Dungeons'],['hyruleInventory','◈','Spirit Orbs']];
-  pagesToAdd.forEach(p=>{if(!pages.some(x=>x[0]===p[0]))pages.push(p)});
-  window.hyruleQuests=questsPage;window.hyruleDungeons=dungeonsPage;window.hyruleInventory=inventoryPage;
-  const oldRender=window.render;
-  window.render=function(){
-    if(page==='hyruleQuests'||page==='hyruleDungeons'||page==='hyruleInventory'){
-      $('view').innerHTML='<div class="row" style="margin:8px 0 14px"><button class="btn" onclick="go(\'home\')">← HERO DASHBOARD</button></div>'+({hyruleQuests:questsPage, hyruleDungeons:dungeonsPage, hyruleInventory:inventoryPage}[page])();
-      bindHyrule();return;
-    }
-    oldRender();
-  };
-  const oldHome=window.home;
-  window.home=function(){return heroStatus()+oldHome()};
-  const style=document.createElement('style');style.textContent=`
-  .hyrule-status{border-color:#c8a85b;background:linear-gradient(135deg,#234a49,#112b36 65%,#172b35);box-shadow:inset 0 0 28px #07151c99,0 0 18px #d6b35b20}
-  .hyrule-status-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.hyrule-status h2{font-size:24px;margin:3px 0}.hyrule-triforce{font-size:56px;color:#e8c56a;text-shadow:0 0 18px #e8c56a55;transform:scaleX(1.15)}
-  .hyrule-orbbar{height:10px;background:#071923;border:1px solid #688d80;margin:10px 0 6px;overflow:hidden}.hyrule-orbbar span{display:block;height:100%;background:linear-gradient(90deg,#4eaaa0,#9acb77,#e8c56a);box-shadow:0 0 12px #9acb7766}
-  .hyrule-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #456b66}.hyrule-item>div:first-child{min-width:0}.hyrule-item small{display:block;color:var(--muted);font:10px system-ui;margin-top:4px}.hyrule-item .row{flex-wrap:nowrap}.hyrule-item .btn{padding:7px 9px}
-  `;document.head.append(style);
-  const originalHeader=window.header;
-  if(typeof originalHeader==='function'){originalHeader();go('home')}
-
-  db.hyrule.hearts??={current:3,max:3};db.hyrule.rupees??={balance:0,ledger:[]};db.hyrule.equipment??=[];db.hyrule.collectibles??=[];
-  const heartState=()=>{const h=db.hyrule.hearts;h.max=Math.max(3,Math.min(20,+h.max||3));h.current=Math.max(0,Math.min(h.max,+h.current||0));return h};
-  const hearts=()=>{const h=heartState();return '<div class="hyrule-hearts">'+Array.from({length:h.max},(_,i)=>'<span class="'+(i<h.current?'full':'empty')+'">♥</span>').join('')+'</div>'};
-  function vitals(){const h=heartState();return '<section class="panel s12"><div class="hyrule-vitals"><div><small>HEART CONTAINERS</small>'+hearts()+'<small>'+h.current+' / '+h.max+' hearts</small></div><div><small>RUPEE WALLET</small><strong class="hyrule-rupee">'+(+db.hyrule.rupees.balance||0).toLocaleString()+' ◆</strong></div></div><div class="row wrap"><button class="btn" onclick="hyruleHeart(-1)">− Heart</button><button class="btn" onclick="hyruleHeart(1)">+ Heart Container</button><button class="btn" onclick="go(\'hyruleWallet\')">Open wallet</button></div></section>'}
-  function wallet(){return '<div class="grid"><section class="panel s6"><h3>RUPEE WALLET</h3><div class="big">'+(+db.hyrule.rupees.balance||0).toLocaleString()+' ◆</div><p class="muted">Current balance</p></section><section class="panel s6"><h3>RECORD TRANSACTION</h3><form id="hyruleWalletForm"><label>Description</label><input name="reason" required maxlength="90"><label>Amount</label><input name="amount" type="number" min="0.01" step="0.01" required><label>Transaction</label><select name="kind"><option value="in">Rupees gained</option><option value="out">Rupees spent</option></select><button class="btn gold">Record</button></form></section><section class="panel s12"><h3>WALLET LEDGER</h3>'+db.hyrule.rupees.ledger.slice().reverse().map(x=>'<div class="stat"><span>'+escH(x.reason)+' <small class="muted">'+new Date(x.date).toLocaleDateString()+'</small></span><b>'+(x.kind==='in'?'+':'−')+Number(x.amount).toLocaleString()+' ◆</b></div>').join('')||'<p class="muted">No transactions yet.</p>'+'</section></div>'}
-  function equipment(){const slots=['Weapon','Shield','Armor','Accessory','Other'];return '<div class="grid"><section class="panel s6"><h3>ADD EQUIPMENT</h3><form id="hyruleEquipmentForm"><label>Item name</label><input name="name" required maxlength="80"><label>Equipment type</label><select name="slot">'+slots.map(x=>'<option>'+x+'</option>').join('')+'</select><label>Notes</label><input name="notes" maxlength="120"><button class="btn gold">Add item</button></form></section><section class="panel s6"><h3>LOADOUT</h3>'+slots.map(x=>'<div class="stat"><span>'+x+'</span><b>'+db.hyrule.equipment.filter(y=>y.slot===x).length+'</b></div>').join('')+'</section><section class="panel s12"><h3>INVENTORY</h3>'+db.hyrule.equipment.map(x=>'<div class="hyrule-item"><div><b>'+escH(x.name)+'</b><small>'+escH(x.slot)+(x.notes?' · '+escH(x.notes):'')+'</small></div><button class="btn danger" onclick="hyruleDeleteEquipment(\''+x.id+'\')">Remove</button></div>').join('')||'<p class="muted">Inventory empty.</p>'+'</section></div>'}
-  function collectibles(){return '<div class="grid"><section class="panel s6"><h3>REGISTER COLLECTIBLE</h3><form id="hyruleCollectibleForm"><label>Collectible</label><input name="name" required maxlength="80"><label>Region</label><input name="region"><label>Category</label><select name="kind"><option>Korok Seed</option><option>Shrine</option><option>Memory</option><option>Treasure</option><option>Other</option></select><button class="btn gold">Add collectible</button></form></section><section class="panel s6"><h3>COLLECTION PROGRESS</h3><div class="big">'+db.hyrule.collectibles.filter(x=>x.found).length+' / '+db.hyrule.collectibles.length+'</div><p class="muted">Found</p></section><section class="panel s12"><h3>COLLECTION LOG</h3>'+db.hyrule.collectibles.map(x=>'<div class="hyrule-item"><div><b>'+escH(x.name)+'</b><small>'+escH(x.kind)+' · '+escH(x.region||'Unknown region')+'</small></div><div class="row"><button class="btn '+(x.found?'':'gold')+'" onclick="hyruleToggleCollectible(\''+x.id+'\')">'+(x.found?'Found ✓':'Mark found')+'</button><button class="btn danger" onclick="hyruleDeleteCollectible(\''+x.id+'\')">×</button></div></div>').join('')||'<p class="muted">No collectibles yet.</p>'+'</section></div>'}
-  window.hyruleHeart=delta=>{const h=heartState();if(delta>0&&h.max<20){h.max++;h.current=h.max}else h.current=Math.max(0,Math.min(h.max,h.current+delta));save();render()};
-  window.hyruleDeleteEquipment=id=>{db.hyrule.equipment=db.hyrule.equipment.filter(x=>x.id!==id);save();render()};
-  window.hyruleToggleCollectible=id=>{const x=db.hyrule.collectibles.find(x=>x.id===id);if(x)x.found=!x.found;save();render()};
-  window.hyruleDeleteCollectible=id=>{db.hyrule.collectibles=db.hyrule.collectibles.filter(x=>x.id!==id);save();render()};
-  const walletBind=()=>{const f=$('hyruleWalletForm');if(f)f.onsubmit=e=>{e.preventDefault();const q=e.target,amount=Math.max(0,+q.amount.value||0),kind=q.kind.value,balance=+db.hyrule.rupees.balance||0;if(!amount)return;if(kind==='out'&&amount>balance){alert('Not enough rupees in the wallet for that purchase.');return}db.hyrule.rupees.balance=balance+(kind==='in'?amount:-amount);db.hyrule.rupees.ledger.push({id:crypto.randomUUID(),reason:q.reason.value.trim(),amount,kind,date:new Date().toISOString()});save();render()}};
-  const equipBind=()=>{const f=$('hyruleEquipmentForm');if(f)f.onsubmit=e=>{e.preventDefault();const q=e.target;db.hyrule.equipment.unshift({id:crypto.randomUUID(),name:q.name.value.trim(),slot:q.slot.value,notes:q.notes.value.trim()});save();render()}};
-  const collectBind=()=>{const f=$('hyruleCollectibleForm');if(f)f.onsubmit=e=>{e.preventDefault();const q=e.target;db.hyrule.collectibles.unshift({id:crypto.randomUUID(),name:q.name.value.trim(),region:q.region.value.trim(),kind:q.kind.value,found:false});save();render()}};
-  const extras=[['hyruleWallet','◆','Rupee Wallet'],['hyruleEquipment','⚔','Equipment'],['hyruleCollectibles','✧','Collectibles']];
-  extras.forEach(p=>{if(!pages.some(x=>x[0]===p[0]))pages.push(p)});
-  window.hyruleWallet=wallet;window.hyruleEquipment=equipment;window.hyruleCollectibles=collectibles;
-  const renderBeforeExtras=window.render;
-  window.render=function(){const v={hyruleWallet:wallet, hyruleEquipment:equipment, hyruleCollectibles:collectibles};if(v[page]){$('view').innerHTML='<div class="row" style="margin:8px 0 14px"><button class="btn" onclick="go(\'home\')">← HERO DASHBOARD</button></div>'+v[page]();walletBind();equipBind();collectBind();return}renderBeforeExtras()};
-  const homeBeforeExtras=window.home;
-  window.home=function(){return vitals()+homeBeforeExtras()+'<div class="modulegrid">'+extras.map(p=>'<button class="module" onclick="go(\''+p[0]+'\')"><i>'+p[1]+'</i><b>'+p[2]+'</b><small>OPEN MODULE</small></button>').join('')+'</div>'};
-  const st=document.createElement('style');st.textContent='.hyrule-vitals{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}.hyrule-vitals small{display:block;color:var(--muted);font:10px system-ui;letter-spacing:.12em}.hyrule-hearts{display:flex;gap:4px;margin:8px 0}.hyrule-hearts span{font-size:24px;line-height:1}.hyrule-hearts .full{color:#e85d62;text-shadow:0 0 9px #e85d6266}.hyrule-hearts .empty{color:#53636a}.hyrule-rupee{display:block;font-size:30px;color:#9bd6a1;margin-top:6px}.hyrule-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #456b66}.hyrule-item small{display:block;color:var(--muted);font:10px system-ui;margin-top:4px}';document.head.append(st);
-  home=window.home;
-  go('home');
+  function listsPage(){
+    const groups=["Shopping","Packing","Home","Work","Someday","Other"];
+    const entries=H.lists.map(x=>'<div class="hyrule-item"><div><b>'+safe(x.text)+'</b><small>'+safe(x.group)+' · '+(x.done?'DONE':'TO DO')+'</small></div><div class="row"><button class="btn '+(x.done?'':'gold')+'" onclick="hyruleToggleList(\''+x.id+'\')">'+(x.done?'Reopen':'Done')+'</button><button class="btn danger" onclick="hyruleRemove(\'lists\',\''+x.id+'\')">×</button></div></div>').join("")||'<p class="muted">No list items yet.</p>';
+    return '<div class="grid"><section class="panel s6"><h3>ADD TO A LIST</h3><form id="hyruleListForm"><label>What do you need to remember?</label><input name="text" required maxlength="120" placeholder="An item, reminder or something to bring"><label>List</label><select name="group">'+groups.map(x=>'<option>'+x+'</option>').join("")+'</select><button class="btn gold">Add item</button></form></section><section class="panel s6"><h3>PERSONAL ORGANIZER</h3><p class="muted">A practical place for shopping, packing, errands, work reminders and ideas. No pretend game inventory.</p><div class="big">'+H.lists.filter(x=>!x.done).length+'</div><p class="muted">Items still to do</p></section><section class="panel s12"><h3>YOUR LISTS</h3>'+entries+'</section></div>';
+  }
+  function memoriesPage(){
+    const entries=H.memories.map(x=>'<div class="hyrule-item"><div><b>'+safe(x.name)+'</b><small>'+safe(x.category)+' · '+new Date(x.date).toLocaleDateString()+'</small>'+(x.note?'<p class="muted">'+safe(x.note)+'</p>':'')+'</div><button class="btn danger" onclick="hyruleRemove(\'memories\',\''+x.id+'\')">×</button></div>').join("")||'<p class="muted">Save a milestone, a good day, an experience, or something you are proud of.</p>';
+    return '<div class="grid"><section class="panel s6"><h3>RECORD A MOMENT</h3><form id="hyruleMemoryForm"><label>What happened?</label><input name="name" required maxlength="100" placeholder="A milestone or memory worth keeping"><label>Type</label><select name="category"><option>Personal milestone</option><option>Experience</option><option>Something I am proud of</option><option>Good memory</option><option>Other</option></select><label>Details</label><textarea name="note" placeholder="A few words to remember it by"></textarea><button class="btn gold">Save to memory book</button></form></section><section class="panel s6"><h3>WHY KEEP A RECORD?</h3><p class="muted">Not every win needs a score. The Memory Book is just a place to keep the good stuff and notice how far you have come.</p><div class="big">'+H.memories.length+'</div><p class="muted">Moments saved</p></section><section class="panel s12"><h3>MEMORY BOOK</h3>'+entries+'</section></div>';
+  }
+  function bind(idName,fn){const f=$(idName);if(f)f.onsubmit=e=>{e.preventDefault();fn(e.target)}}
+  bind("hyruleQuestForm",f=>{const reward=+f.level.value;H.quests.unshift({id:id(),name:f.name.value.trim(),category:f.category.value,notes:f.notes.value.trim(),reward,done:false,date:new Date().toISOString()});save();render()});
+  bind("hyruleProjectForm",f=>{H.projects.unshift({id:id(),name:f.name.value.trim(),category:f.category.value,notes:f.notes.value.trim(),done:false,date:new Date().toISOString()});save();render()});
+  bind("hyruleRewardForm",f=>{H.rewards.unshift({id:id(),name:f.name.value.trim(),cost:Math.max(1,+f.cost.value||1),redeemed:0});save();render()});
+  bind("hyruleListForm",f=>{H.lists.unshift({id:id(),text:f.text.value.trim(),group:f.group.value,done:false});save();render()});
+  bind("hyruleMemoryForm",f=>{H.memories.unshift({id:id(),name:f.name.value.trim(),category:f.category.value,note:f.note.value.trim(),date:new Date().toISOString()});award(0,"");checkBadges();save();render()});
+  window.hyruleFinishQuest=idValue=>{const q=H.quests.find(x=>x.id===idValue);if(!q||q.done)return;q.done=true;q.completedAt=new Date().toISOString();award(q.reward,"Quest complete: "+q.name);render()};
+  window.hyruleFinishProject=idValue=>{const p=H.projects.find(x=>x.id===idValue);if(!p||p.done)return;p.done=true;p.completedAt=new Date().toISOString();award(40,"Main quest complete: "+p.name);render()};
+  window.hyruleRedeem=idValue=>{const r=H.rewards.find(x=>x.id===idValue);if(!r||total()<r.cost)return;H.orbEvents.unshift({id:id(),amount:-r.cost,reason:"Treasure redeemed: "+r.name,date:new Date().toISOString()});r.redeemed=(r.redeemed||0)+1;save();render()};
+  window.hyruleToggleList=idValue=>{const x=H.lists.find(x=>x.id===idValue);if(x)x.done=!x.done;save();render()};
+  window.hyruleRemove=(key,idValue)=>{if(!Array.isArray(H[key]))return;H[key]=H[key].filter(x=>x.id!==idValue);save();render()};
+  const routes={hyruleQuests:questsPage, hyruleProjects:projectsPage, hyruleAchievements:achievementsPage, hyruleRewards:rewardsPage, hyruleLists:listsPage, hyruleMemories:memoriesPage};
+  Object.entries(routes).forEach(([k,v])=>{window[k]=v;if(!pages.some(p=>p[0]===k))pages.push([k,"◇",({hyruleQuests:"Quest Log",hyruleProjects:"Main Quests",hyruleAchievements:"Hero's Journey",hyruleRewards:"Treasure Chest",hyruleLists:"Personal Lists",hyruleMemories:"Memory Book"})[k]])});
+  const previousRender=window.render;
+  window.render=function(){if(routes[page]){$("view").innerHTML='<div class="row" style="margin:8px 0 14px"><button class="btn" onclick="go(\'home\')">← HERO DASHBOARD</button></div>'+routes[page]();return}previousRender()};
+  const previousHome=window.home;
+  window.home=function(){return homeExtras()+previousHome()};
+  const style=document.createElement("style");
+  style.textContent=".hyrule-status{border-color:#c8a85b;background:linear-gradient(135deg,#234a49,#112b36 65%,#172b35);box-shadow:inset 0 0 28px #07151c99,0 0 18px #d6b35b20}.hyrule-status-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.hyrule-status h2{font-size:24px;margin:3px 0}.hyrule-triforce{font-size:56px;color:#e8c56a;text-shadow:0 0 18px #e8c56a55}.hyrule-orbbar{height:10px;background:#071923;border:1px solid #688d80;margin:10px 0 6px;overflow:hidden}.hyrule-orbbar span{display:block;height:100%;background:linear-gradient(90deg,#4eaaa0,#9acb77,#e8c56a)}.hyrule-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #456b66}.hyrule-item>div:first-child{min-width:0}.hyrule-item small{display:block;color:var(--muted);font:10px system-ui;margin-top:4px}.hyrule-item .row{flex-wrap:nowrap}.hyrule-item .btn{padding:7px 9px}.hyrule-module small{display:block;font:10px system-ui;color:#d6e3d4;margin-top:7px;text-align:center}.hyrule-module i{font-style:normal}.hyrule-module b{font-size:16px}";
+  document.head.append(style);
+  checkBadges();
+  if(typeof window.header==="function")window.header();
+  go("home");
 })();
