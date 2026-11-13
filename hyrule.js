@@ -240,6 +240,8 @@
 `;
 
 
+
+  style.textContent+="\n/* Navi's fairy announcement panel */\n.navi-panel{padding:0!important;overflow:hidden!important;border-color:#72d9ff!important;background:linear-gradient(145deg,#172f42,#101e31)!important;box-shadow:0 0 22px #53caff30,inset 0 0 18px #53caff18!important}.navi-banner{width:100%;aspect-ratio:3/1;min-height:105px;max-height:180px;background-image:url('./navi-header.jpg');background-size:cover;background-position:center 45%;border-bottom:2px solid #8bdfff;box-shadow:0 4px 18px #45bfff44}.navi-speech{padding:12px 16px 16px;text-align:center}.navi-name{font:800 11px Cinzel,Georgia,serif;letter-spacing:.2em;color:#8bdfff;text-shadow:0 0 9px #45bfff99}.navi-speech p{font:700 16px Georgia,serif;line-height:1.45;color:#f3f7ff;margin:8px 0 3px;text-shadow:0 1px 4px #071321}.navi-speech small{display:block;color:#9fb9cc;font:10px system-ui;margin-top:6px}\n";
   checkBadges();
   if(typeof window.header==="function")window.header();
   go("home");
