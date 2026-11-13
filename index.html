@@ -252,7 +252,45 @@ button.module,button.hyrule-module{
   .modulegrid .module b,.modulegrid .hyrule-module b,
   button.module b,button.hyrule-module b{font-size:clamp(25px,7.5vw,31px)!important}
 }
-</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Cinzel+Decorative:wght@700;900&display=swap" rel="stylesheet"></head><body><svg aria-hidden="true" width="0" height="0" style="position:absolute;left:-10000px;top:-10000px"><defs><clipPath id="majora-mask-clip" clipPathUnits="objectBoundingBox"><path d="M .28 .22 C .25 .20 .25 .14 .26 .08 L .28 .015 C .30 -.005 .31 .025 .32 .06 L .39 .20 C .43 .25 .47 .27 .50 .28 C .53 .27 .57 .25 .61 .20 L .68 .06 C .69 .025 .70 -.005 .72 .015 L .74 .08 C .75 .14 .75 .20 .72 .22 C .86 .22 .94 .31 .93 .43 C .93 .50 .89 .56 .86 .62 L .99 .68 L .84 .69 L .94 .80 L .77 .77 L .87 .92 L .68 .84 L .64 .99 L .50 .90 L .36 .99 L .32 .84 L .13 .92 L .23 .77 L .06 .80 L .16 .69 L .01 .68 L .14 .62 C .11 .56 .07 .50 .07 .43 C .06 .31 .14 .22 .28 .22 Z"/></clipPath></defs></svg><div class="top"><span id="topGreeting">WELCOME, HERO</span><b>THE KINGDOM AWAITS</b><span id="clock"></span></div><div class="wrap"><div class="hero"><div><div class="eyebrow" id="greet">WELCOME, HERO</div><h1 id="title">WELCOME, HERO</h1><div class="muted" id="dateLabel"></div></div><button class="btn" onclick="go('settings')">⚙ Settings</button></div><div class="bar"><span id="xp"></span></div><div class="barlabel"><span>SPIRIT ORBS TODAY</span><span id="xptext">0 / 100</span></div><nav id="nav" style="display:none!important" aria-hidden="true"></nav><main id="view"></main><div class="foot">LOCAL HERO RECORDS · EXPORT BACKUPS REGULARLY · HYRULE ADVENTURE RECORDS</div></div>
-<script src="app.js?v=33"></script>
 
-<script src="hyrule.js?v=33"></script><script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}</script></body></html>
+/* Version 34 — unified Hyrule color system and page-specific accents */
+:root{
+  --hyrule-night:#08151c;--hyrule-panel:#102630;--hyrule-line:#557d78;
+  --hyrule-gold:#e8c56a;--hyrule-ivory:#f5efd9;--hyrule-mist:#a9c2bb;
+  --page-accent:#e8c56a;--page-glow:#e8c56a22;--page-deep:#173b3b;
+}
+body{background:radial-gradient(ellipse at 12% 0%,#294b48 0%,transparent 34%),radial-gradient(ellipse at 90% 15%,#173e5b 0%,transparent 32%),linear-gradient(145deg,#07121a,#0b1a21 60%,#101c25)!important;color:var(--hyrule-ivory)!important}
+body[data-page="habits"]{--page-accent:#9fce83;--page-glow:#9fce8330;--page-deep:#254b3b}
+body[data-page="reading"]{--page-accent:#91c8e8;--page-glow:#91c8e830;--page-deep:#1c405c}
+body[data-page="hobbies"]{--page-accent:#c2a3e8;--page-glow:#c2a3e830;--page-deep:#3a2d55}
+body[data-page="recipes"]{--page-accent:#e9a96c;--page-glow:#e9a96c30;--page-deep:#573a28}
+body[data-page="work"]{--page-accent:#83c9c4;--page-glow:#83c9c430;--page-deep:#1b4548}
+body[data-page="daily"]{--page-accent:#e8c56a;--page-glow:#e8c56a30;--page-deep:#514328}
+body[data-page="budget"]{--page-accent:#a8cf85;--page-glow:#a8cf8530;--page-deep:#2b4936}
+body[data-page="stats"]{--page-accent:#e3bd79;--page-glow:#e3bd7930;--page-deep:#4a3c2a}
+body[data-page="settings"]{--page-accent:#9dbbc8;--page-glow:#9dbbc830;--page-deep:#29424d}
+body[data-page^="hyrule"]{--page-accent:#e8c56a;--page-glow:#e8c56a30;--page-deep:#214b45}
+#view .eyebrow{color:var(--page-accent)!important;text-shadow:0 0 10px var(--page-glow)}
+#view h2,#view h3{color:var(--page-accent)!important}
+#view .panel{background:linear-gradient(145deg,color-mix(in srgb,var(--page-deep) 68%,#102630),#0d2029)!important;border-color:color-mix(in srgb,var(--page-accent) 58%,#34545a)!important;box-shadow:inset 0 0 22px var(--page-glow),0 4px 16px #0005!important}
+#view .panel:before,#view .panel:after{border-color:var(--page-accent)!important}
+#view .entry,#view .bookcard,#view .day,#view .stat{background-color:color-mix(in srgb,var(--page-deep) 42%,#0b1b23)!important;border-color:color-mix(in srgb,var(--page-accent) 28%,#344b50)!important}
+#view .bookcard{background:linear-gradient(145deg,color-mix(in srgb,var(--page-deep) 72%,#102630),#0b1b23)!important}
+#view .chart{background:#07141b!important;border-color:color-mix(in srgb,var(--page-accent) 45%,#344b50)!important}
+#view .chart span{background:linear-gradient(90deg,var(--page-accent),#e8c56a)!important}
+#view .tag{border-color:color-mix(in srgb,var(--page-accent) 60%,#38545a)!important;color:var(--page-accent)!important}
+#view input,#view textarea,#view select{background:#081820!important;color:var(--hyrule-ivory)!important;border-color:color-mix(in srgb,var(--page-accent) 45%,#34545a)!important;accent-color:var(--page-accent)}
+#view label{color:color-mix(in srgb,var(--page-accent) 75%,#d5e0d2)!important}
+#view .btn:not(.gold):not(.danger),#view button:not(.gold):not(.danger){background:linear-gradient(135deg,color-mix(in srgb,var(--page-deep) 80%,#102630),#0b1b23)!important;border-color:color-mix(in srgb,var(--page-accent) 55%,#34545a)!important;color:var(--hyrule-ivory)!important}
+#view .btn.primary{background:linear-gradient(135deg,var(--page-deep),#244b65)!important;border-color:var(--page-accent)!important}
+#view .big{color:var(--page-accent)!important}
+#view .cover{background:linear-gradient(145deg,color-mix(in srgb,var(--page-deep) 85%,#102630),#0b1b23)!important;border-color:var(--page-accent)!important}
+#view .paper{background:#eee4c9!important;color:#342d24!important;border-color:#9c835a!important}
+#view .paper h2,#view .paper h3{color:#4d412e!important}
+.dashboard-return{display:flex;justify-content:flex-start;margin:4px 0 16px}
+.dashboard-back{background:linear-gradient(135deg,#315a55,#183b42)!important;border:1px solid #e8c56a!important;color:#ffe8a0!important;padding:11px 16px!important;font:700 11px Georgia,serif!important;letter-spacing:.08em!important;box-shadow:0 0 12px #e8c56a22,inset 0 0 12px #e8c56a12!important}
+.dashboard-back:active{transform:translateY(1px)}
+</style><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Cinzel+Decorative:wght@700;900&display=swap" rel="stylesheet"></head><body><svg aria-hidden="true" width="0" height="0" style="position:absolute;left:-10000px;top:-10000px"><defs><clipPath id="majora-mask-clip" clipPathUnits="objectBoundingBox"><path d="M .28 .22 C .25 .20 .25 .14 .26 .08 L .28 .015 C .30 -.005 .31 .025 .32 .06 L .39 .20 C .43 .25 .47 .27 .50 .28 C .53 .27 .57 .25 .61 .20 L .68 .06 C .69 .025 .70 -.005 .72 .015 L .74 .08 C .75 .14 .75 .20 .72 .22 C .86 .22 .94 .31 .93 .43 C .93 .50 .89 .56 .86 .62 L .99 .68 L .84 .69 L .94 .80 L .77 .77 L .87 .92 L .68 .84 L .64 .99 L .50 .90 L .36 .99 L .32 .84 L .13 .92 L .23 .77 L .06 .80 L .16 .69 L .01 .68 L .14 .62 C .11 .56 .07 .50 .07 .43 C .06 .31 .14 .22 .28 .22 Z"/></clipPath></defs></svg><div class="top"><span id="topGreeting">WELCOME, HERO</span><b>THE KINGDOM AWAITS</b><span id="clock"></span></div><div class="wrap"><div class="hero"><div><div class="eyebrow" id="greet">WELCOME, HERO</div><h1 id="title">WELCOME, HERO</h1><div class="muted" id="dateLabel"></div></div><button class="btn" onclick="go('settings')">⚙ Settings</button></div><div class="bar"><span id="xp"></span></div><div class="barlabel"><span>SPIRIT ORBS TODAY</span><span id="xptext">0 / 100</span></div><nav id="nav" style="display:none!important" aria-hidden="true"></nav><main id="view"></main><div class="foot">LOCAL HERO RECORDS · EXPORT BACKUPS REGULARLY · HYRULE ADVENTURE RECORDS</div></div>
+<script src="app.js?v=34"></script>
+
+<script src="hyrule.js?v=34"></script><script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}</script></body></html>
