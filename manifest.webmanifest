@@ -1,0 +1,18 @@
+{
+  "name": "Hyrule Command Center",
+  "short_name": "Hyrule",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#07121a",
+  "theme_color": "#07121a",
+  "description": "A personal Hyrule adventure planner",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
