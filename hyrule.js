@@ -50,6 +50,7 @@
   function naviPanel(){
     return '<section class="panel s12 navi-panel"><div class="navi-banner" role="img" aria-label="A glowing blue fairy inspired by Navi"><span class="navi-spark s1">✦</span><span class="navi-spark s2">✧</span><span class="navi-spark s3">✦</span><div class="navi-fairy"><span class="navi-wing left"></span><span class="navi-wing right"></span><span class="navi-core"></span></div><div class="navi-banner-title">HEY! LISTEN!</div></div><div class="navi-speech"><span class="navi-name">✦ NAVI SAYS ✦</span><p>'+safe(H.navi.message)+'</p>'+(H.navi.detail?'<small>'+safe(H.navi.detail)+'</small>':'')+'</div></section>';
   }
+  window.hyruleNaviPanel=naviPanel;
   function status(){
     const done=completedDailyTasks(),todayTasks=db.daily?.[today()]?.todo||[],open=todayTasks.filter(x=>!x.done).length;
     return '<section class="panel s12 hyrule-status"><div class="hyrule-status-head"><div><div class="eyebrow">YOUR ADVENTURE, YOUR PACE</div><h2>HERO LEVEL '+level()+'</h2><p class="muted">'+earned().toLocaleString()+' SPIRIT ORBS EARNED</p></div><div class="hyrule-triforce">△</div></div><div class="hyrule-orbbar"><span style="width:'+progress()+'%"></span></div><div class="row between"><small class="muted">'+progress()+' / 100 to next level</small><small class="muted">'+done+' daily quests completed · '+open+' left today</small></div></section>';
