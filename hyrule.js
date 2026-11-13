@@ -79,11 +79,11 @@
   }
   function bind(idName,fn){const f=$(idName);if(f)f.onsubmit=e=>{e.preventDefault();fn(e.target)}}
   function bindForms(){
-    bind("hyruleQuestForm",f=>{const reward=+f.level.value;H.quests.unshift({id:id(),name:f.name.value.trim(),category:f.category.value,notes:f.notes.value.trim(),reward,done:false,date:new Date().toISOString()});save();render()});
-    bind("hyruleProjectForm",f=>{H.projects.unshift({id:id(),name:f.name.value.trim(),category:f.category.value,notes:f.notes.value.trim(),done:false,date:new Date().toISOString()});save();render()});
-    bind("hyruleRewardForm",f=>{H.rewards.unshift({id:id(),name:f.name.value.trim(),cost:Math.max(1,+f.cost.value||1),redeemed:0});save();render()});
+    bind("hyruleQuestForm",f=>{const reward=+f.level.value;H.quests.unshift({id:id(),name:f.elements.namedItem("name").value.trim(),category:f.category.value,notes:f.notes.value.trim(),reward,done:false,date:new Date().toISOString()});save();render()});
+    bind("hyruleProjectForm",f=>{H.projects.unshift({id:id(),name:f.elements.namedItem("name").value.trim(),category:f.category.value,notes:f.notes.value.trim(),done:false,date:new Date().toISOString()});save();render()});
+    bind("hyruleRewardForm",f=>{H.rewards.unshift({id:id(),name:f.elements.namedItem("name").value.trim(),cost:Math.max(1,+f.cost.value||1),redeemed:0});save();render()});
     bind("hyruleListForm",f=>{H.lists.unshift({id:id(),text:f.text.value.trim(),group:f.group.value,done:false});save();render()});
-    bind("hyruleMemoryForm",f=>{H.memories.unshift({id:id(),name:f.name.value.trim(),category:f.category.value,note:f.note.value.trim(),date:new Date().toISOString()});checkBadges();save();render()});
+    bind("hyruleMemoryForm",f=>{H.memories.unshift({id:id(),name:f.elements.namedItem("name").value.trim(),category:f.category.value,note:f.note.value.trim(),date:new Date().toISOString()});checkBadges();save();render()});
   }
   window.hyruleFinishQuest=idValue=>{const q=H.quests.find(x=>x.id===idValue);if(!q||q.done)return;q.done=true;q.completedAt=new Date().toISOString();award(q.reward,"Quest complete: "+q.name);render()};
   window.hyruleFinishProject=idValue=>{const p=H.projects.find(x=>x.id===idValue);if(!p||p.done)return;p.done=true;p.completedAt=new Date().toISOString();award(40,"Main quest complete: "+p.name);render()};
