@@ -1,5 +1,5 @@
-const CACHE = "hyrule-command-center-v30";
-const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg", "./hyrule.js", "./app.js?v=30"];
+const CACHE = "hyrule-command-center-v31";
+const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg", "./hyrule.js", "./app.js?v=31"];
 
 self.addEventListener("install", event => {
   event.waitUntil(
