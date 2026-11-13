@@ -78,11 +78,13 @@
     return '<div class="grid"><section class="panel s6"><h3>RECORD A MOMENT</h3><form id="hyruleMemoryForm"><label>What happened?</label><input name="name" required maxlength="100" placeholder="A milestone or memory worth keeping"><label>Type</label><select name="category"><option>Personal milestone</option><option>Experience</option><option>Something I am proud of</option><option>Good memory</option><option>Other</option></select><label>Details</label><textarea name="note" placeholder="A few words to remember it by"></textarea><button class="btn gold">Save to memory book</button></form></section><section class="panel s6"><h3>WHY KEEP A RECORD?</h3><p class="muted">Not every win needs a score. The Memory Book is just a place to keep the good stuff and notice how far you have come.</p><div class="big">'+H.memories.length+'</div><p class="muted">Moments saved</p></section><section class="panel s12"><h3>MEMORY BOOK</h3>'+entries+'</section></div>';
   }
   function bind(idName,fn){const f=$(idName);if(f)f.onsubmit=e=>{e.preventDefault();fn(e.target)}}
-  bind("hyruleQuestForm",f=>{const reward=+f.level.value;H.quests.unshift({id:id(),name:f.name.value.trim(),category:f.category.value,notes:f.notes.value.trim(),reward,done:false,date:new Date().toISOString()});save();render()});
-  bind("hyruleProjectForm",f=>{H.projects.unshift({id:id(),name:f.name.value.trim(),category:f.category.value,notes:f.notes.value.trim(),done:false,date:new Date().toISOString()});save();render()});
-  bind("hyruleRewardForm",f=>{H.rewards.unshift({id:id(),name:f.name.value.trim(),cost:Math.max(1,+f.cost.value||1),redeemed:0});save();render()});
-  bind("hyruleListForm",f=>{H.lists.unshift({id:id(),text:f.text.value.trim(),group:f.group.value,done:false});save();render()});
-  bind("hyruleMemoryForm",f=>{H.memories.unshift({id:id(),name:f.name.value.trim(),category:f.category.value,note:f.note.value.trim(),date:new Date().toISOString()});award(0,"");checkBadges();save();render()});
+  function bindForms(){
+    bind("hyruleQuestForm",f=>{const reward=+f.level.value;H.quests.unshift({id:id(),name:f.name.value.trim(),category:f.category.value,notes:f.notes.value.trim(),reward,done:false,date:new Date().toISOString()});save();render()});
+    bind("hyruleProjectForm",f=>{H.projects.unshift({id:id(),name:f.name.value.trim(),category:f.category.value,notes:f.notes.value.trim(),done:false,date:new Date().toISOString()});save();render()});
+    bind("hyruleRewardForm",f=>{H.rewards.unshift({id:id(),name:f.name.value.trim(),cost:Math.max(1,+f.cost.value||1),redeemed:0});save();render()});
+    bind("hyruleListForm",f=>{H.lists.unshift({id:id(),text:f.text.value.trim(),group:f.group.value,done:false});save();render()});
+    bind("hyruleMemoryForm",f=>{H.memories.unshift({id:id(),name:f.name.value.trim(),category:f.category.value,note:f.note.value.trim(),date:new Date().toISOString()});checkBadges();save();render()});
+  }
   window.hyruleFinishQuest=idValue=>{const q=H.quests.find(x=>x.id===idValue);if(!q||q.done)return;q.done=true;q.completedAt=new Date().toISOString();award(q.reward,"Quest complete: "+q.name);render()};
   window.hyruleFinishProject=idValue=>{const p=H.projects.find(x=>x.id===idValue);if(!p||p.done)return;p.done=true;p.completedAt=new Date().toISOString();award(40,"Main quest complete: "+p.name);render()};
   window.hyruleRedeem=idValue=>{const r=H.rewards.find(x=>x.id===idValue);if(!r||total()<r.cost)return;H.orbEvents.unshift({id:id(),amount:-r.cost,reason:"Treasure redeemed: "+r.name,date:new Date().toISOString()});r.redeemed=(r.redeemed||0)+1;save();render()};
@@ -91,7 +93,7 @@
   const routes={hyruleQuests:questsPage, hyruleProjects:projectsPage, hyruleAchievements:achievementsPage, hyruleRewards:rewardsPage, hyruleLists:listsPage, hyruleMemories:memoriesPage};
   Object.entries(routes).forEach(([k,v])=>{window[k]=v;if(!pages.some(p=>p[0]===k))pages.push([k,"◇",({hyruleQuests:"Quest Log",hyruleProjects:"Main Quests",hyruleAchievements:"Hero's Journey",hyruleRewards:"Treasure Chest",hyruleLists:"Personal Lists",hyruleMemories:"Memory Book"})[k]])});
   const previousRender=window.render;
-  window.render=function(){if(routes[page]){$("view").innerHTML='<div class="row" style="margin:8px 0 14px"><button class="btn" onclick="go(\'home\')">← HERO DASHBOARD</button></div>'+routes[page]();return}previousRender()};
+  window.render=function(){if(routes[page]){$("view").innerHTML='<div class="row" style="margin:8px 0 14px"><button class="btn" onclick="go(\'home\')">← HERO DASHBOARD</button></div>'+routes[page]();bindForms();return}previousRender()};
   const previousHome=window.home;
   window.home=function(){return homeExtras()+previousHome()};
   const style=document.createElement("style");
