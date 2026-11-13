@@ -23,12 +23,32 @@
     {id:"well-rounded",name:"Consistent Hero",icon:"🌟",desc:"Complete daily quests on 4 different days",test:()=>new Set(Object.entries(db.daily||{}).filter(([,d])=>(d.todo||[]).some(t=>t.done)).map(([date])=>date)).size>=4}
   ];
   function checkBadges(){
-    badgeRules.forEach(b=>{if(b.test()&&!H.badges.some(x=>x.id===b.id)){H.badges.unshift({id:b.id,name:b.name,icon:b.icon,desc:b.desc,date:new Date().toISOString()})}});
+    badgeRules.forEach(b=>{if(b.test()&&!H.badges.some(x=>x.id===b.id)){H.badges.unshift({id:b.id,name:b.name,icon:b.icon,desc:b.desc,date:new Date().toISOString()});naviCelebrate("badge",b.name)}});
   }
   function award(amount,reason){
     amount=Math.max(0,Math.min(500,+amount||0));if(!amount)return;
     H.orbEvents.unshift({id:id(),amount,reason:String(reason||"A little progress").trim(),date:new Date().toISOString()});
     checkBadges();save();
+  }
+
+  // Navi celebrates real progress with a rotating, non-repeating set of messages.
+  H.navi=Object.assign({message:"Hey! Listen! Your next adventure is waiting, hero.",lastIds:[],counts:{}},H.navi||{});
+  const naviLines={
+    quest:[["n1","Yahoo! Another quest complete! Keep that momentum going!"],["n2","Hey! Listen! You did the thing you set out to do. Nice work!"],["n3","One more task down. Hyrule is looking a little brighter already!"],["n4","Look at you go! Even the Hero of Time started with one small step."],["n5","Quest cleared! Take a second to enjoy that win, hero."]],
+    main:[["m1","A major quest completed! That deserves a victory lap!"],["m2","Incredible! You stayed with the big challenge and saw it through!"],["m3","The kingdom celebrates a hero who finishes what they start!"],["m4","That was no side quest. You made real progress today!"]],
+    wellness:[["w1","Hey! Listen! Taking care of yourself counts as progress, too."],["w2","A little check-in is a big act of self-awareness. Well done!"],["w3","Even heroes need to check their hearts. Thanks for looking after yours."],["w4","You made time to notice how you're doing. That's worth celebrating."]],
+    badge:[["b1","A new medal shines in your collection! You earned that!"],["b2","Yahoo! A new achievement unlocked. Your legend grows!"],["b3","That milestone is yours now. Add it to the hero's record!"]],
+    reward:[["r1","A well-earned treasure! Enjoy your reward, hero!"],["r2","Hey! Listen! You worked for this. Time to enjoy the loot!"],["r3","A little celebration is in order. Your effort paid off!"]]
+  };
+  function naviCelebrate(type,detail){
+    const pool=naviLines[type]||naviLines.quest,counts=H.navi.counts||(H.navi.counts={});
+    let start=counts[type]||0,choice=null;
+    for(let step=0;step<pool.length;step++){const candidate=pool[(start+step)%pool.length];if(!(H.navi.lastIds||[]).includes(candidate[0])){choice=candidate;counts[type]=(start+step+1)%pool.length;break}}
+    if(!choice){choice=pool[start%pool.length];counts[type]=(start+1)%pool.length}
+    H.navi.message=choice[1];H.navi.event=type;H.navi.detail=String(detail||"").slice(0,90);H.navi.updatedAt=new Date().toISOString();H.navi.lastIds=[...(H.navi.lastIds||[]),choice[0]].slice(-3);save();
+  }
+  function naviPanel(){
+    return '<section class="panel s12 navi-panel"><div class="navi-banner" role="img" aria-label="Navi the fairy says Hey! Listen!"></div><div class="navi-speech"><span class="navi-name">✦ NAVI SAYS ✦</span><p>'+safe(H.navi.message)+'</p>'+(H.navi.detail?'<small>'+safe(H.navi.detail)+'</small>':'')+'</div></section>';
   }
   function status(){
     const done=completedDailyTasks(),todayTasks=db.daily?.[today()]?.todo||[],open=todayTasks.filter(x=>!x.done).length;
@@ -44,7 +64,7 @@
     task.id=task.id||id();
     if(H.orbEvents.some(e=>e.taskId===String(task.id)))return;
     H.orbEvents.unshift({id:'daily-task:'+task.id,taskId:String(task.id),amount:10,reason:'Daily quest completed: '+String(task.text||'Task').trim(),date:new Date().toISOString(),taskDate:date||today()});
-    checkBadges();save();
+    checkBadges();naviCelebrate("quest",task.text);save();
   }
   window.hyruleDailyTaskToggle=function(taskId,checked){
     const d=db.daily?.[today()];if(!d)return;
@@ -69,7 +89,7 @@
   function homeExtras(){
     const recent=H.orbEvents.slice(0,3).map(x=>'<div class="stat"><span>'+safe(x.reason)+'</span><b>+'+x.amount+' orbs</b></div>').join("")||'<p class="muted">Your first reward is waiting for a meaningful win.</p>';
     const badges=H.badges.slice(0,4).map(x=>'<span class="tag">'+x.icon+' '+safe(x.name)+'</span>').join("")||'<p class="muted">Your first achievement is waiting.</p>';
-    return status()+
+    return naviPanel()+status()+
       '<div class="grid"><section class="panel s6"><h3>RECENT REWARDS</h3>'+recent+'</section><section class="panel s6"><h3>MEDALS & ACHIEVEMENTS</h3>'+badges+'<p><button class="btn" onclick="go(\'hyruleAchievements\')">View achievement case</button></p></section></div>'+
       '';
   }
@@ -110,8 +130,8 @@
     bind("hyruleMemoryForm",f=>{H.memories.unshift({id:id(),name:f.elements.namedItem("name").value.trim(),category:f.category.value,note:f.note.value.trim(),date:new Date().toISOString()});checkBadges();save();render()});
   }
   window.hyruleFinishQuest=idValue=>{const q=H.quests.find(x=>x.id===idValue);if(!q||q.done)return;q.done=true;q.completedAt=new Date().toISOString();award(q.reward,"Quest complete: "+q.name);render()};
-  window.hyruleFinishProject=idValue=>{const p=H.projects.find(x=>x.id===idValue);if(!p||p.done)return;p.done=true;p.completedAt=new Date().toISOString();award(40,"Main quest complete: "+p.name);render()};
-  window.hyruleRedeem=idValue=>{const r=H.rewards.find(x=>x.id===idValue);if(!r||total()<r.cost)return;H.orbEvents.unshift({id:id(),amount:-r.cost,reason:"Treasure redeemed: "+r.name,date:new Date().toISOString()});r.redeemed=(r.redeemed||0)+1;checkBadges();save();render()};
+  window.hyruleFinishProject=idValue=>{const p=H.projects.find(x=>x.id===idValue);if(!p||p.done)return;p.done=true;p.completedAt=new Date().toISOString();award(40,"Main quest complete: "+p.name);naviCelebrate("main",p.name);render()};
+  window.hyruleRedeem=idValue=>{const r=H.rewards.find(x=>x.id===idValue);if(!r||total()<r.cost)return;H.orbEvents.unshift({id:id(),amount:-r.cost,reason:"Treasure redeemed: "+r.name,date:new Date().toISOString()});r.redeemed=(r.redeemed||0)+1;checkBadges();naviCelebrate("reward",r.name);save();render()};
   window.hyruleToggleList=idValue=>{const x=H.lists.find(x=>x.id===idValue);if(x)x.done=!x.done;save();render()};
   window.hyruleRemove=(key,idValue)=>{if(!Array.isArray(H[key]))return;H[key]=H[key].filter(x=>x.id!==idValue);save();render()};
 
@@ -138,7 +158,7 @@
   window.healthDate=healthDate;
   window.setHealthDate=s=>{healthDate=s;render()};
   window.deleteSymptom=idValue=>{H.symptoms=H.symptoms.filter(x=>x.id!==idValue);save();render()};
-  function bindSymptomForm(){const f=$("symptomForm");if(!f)return;f.onsubmit=e=>{e.preventDefault();const o=Object.fromEntries(new FormData(f));H.symptoms.unshift({id:id(),date:$("healthDate")?.value||healthDate,...o,severity:Math.max(1,Math.min(10,+o.severity||1)),createdAt:new Date().toISOString()});healthDate=$("healthDate")?.value||healthDate;save();render()}}
+  function bindSymptomForm(){const f=$("symptomForm");if(!f)return;f.onsubmit=e=>{e.preventDefault();const o=Object.fromEntries(new FormData(f));H.symptoms.unshift({id:id(),date:$("healthDate")?.value||healthDate,...o,severity:Math.max(1,Math.min(10,+o.severity||1)),createdAt:new Date().toISOString()});healthDate=$("healthDate")?.value||healthDate;naviCelebrate("wellness",o.name);save();render()}}
   // Calendar with month, week and day views; events are stored locally.
   const calDate=s=>new Date(s+"T12:00:00");
   const calKey=d=>dateKey(d);
