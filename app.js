@@ -13,7 +13,7 @@ function stevenDateShift(s,months){let d=new Date(s+'T12:00:00'),day=d.getDate()
 function stevenOccurrenceStatus(){
  let records=(db.stevenOcc||[]).map((o,i)=>({...o,_i:i,annual:stevenDateShift(o.date,12)})).sort((x,y)=>x.date.localeCompare(y.date)||x._i-y._i);
  let active=[],events=[];
- records.forEach(o=>{events.push({date:o.date,type:'add',o});events.push({date:o.annual,type:'annual',o});events.push({date:stevenDateShift(o.date,6),type:'grace',o})});
+ records.forEach(o=>{events.push({date:o.date,type:'add',o});events.push({date:o.annual,type:'annual',o});if(records.findIndex(x=>x.date===o.date)===o._i)events.push({date:stevenDateShift(o.date,6),type:'grace',o})});
  events.sort((x,y)=>x.date.localeCompare(y.date)||(x.type==='add'?-1:1));
  let lastDate=null,cleared=new Set();
  events.forEach(e=>{
