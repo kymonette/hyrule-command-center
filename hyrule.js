@@ -32,7 +32,7 @@
     const done=H.quests.filter(x=>x.done).length,open=H.quests.filter(x=>!x.done).length;
     return '<section class="panel s12 hyrule-status"><div class="hyrule-status-head"><div><div class="eyebrow">YOUR ADVENTURE, YOUR PACE</div><h2>HERO LEVEL '+level()+'</h2><p class="muted">'+total().toLocaleString()+' SPIRIT ORBS EARNED</p></div><div class="hyrule-triforce">△</div></div><div class="hyrule-orbbar"><span style="width:'+progress()+'%"></span></div><div class="row between"><small class="muted">'+progress()+' / 100 to next level</small><small class="muted">'+done+' quests complete · '+open+' still ahead</small></div></section>';
   }
-  function hyruleMaskOutline(){return '<img class="mask-outline" src="./majora-mask-outline.webp" alt="" aria-hidden="true">'}function tile(key,icon,title,sub){
+  function hyruleMaskOutline(){return '<img class="mask-outline" src="./majora-mask-outline.webp?v=26" alt="" aria-hidden="true">'}function tile(key,icon,title,sub){
     return '<button class="module hyrule-module" onclick="go(\''+key+'\')">'+hyruleMaskOutline()+'<i>'+icon+'</i><b>'+title+'</b><small>'+sub+'</small></button>';
   }
   function homeExtras(){
