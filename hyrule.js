@@ -8,8 +8,9 @@
   const safe=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const id=()=>crypto.randomUUID();
   const total=()=>H.orbEvents.reduce((n,x)=>n+(+x.amount||0),0);
-  const level=()=>Math.floor(total()/100)+1;
-  const progress=()=>total()%100;
+  const earned=()=>H.orbEvents.reduce((n,x)=>n+Math.max(0,+x.amount||0),0);
+  const level=()=>Math.floor(earned()/100)+1;
+  const progress=()=>earned()%100;
   const categories=["Daily Life","Work","Health & Wellness","Home","Personal Growth","Fun & Hobbies"];
   const completedDailyTasks=()=>Object.values(db.daily||{}).reduce((n,d)=>n+(d.todo||[]).filter(t=>t.done).length,0);
   const badgeRules=[
@@ -31,7 +32,7 @@
   }
   function status(){
     const done=completedDailyTasks(),todayTasks=db.daily?.[today()]?.todo||[],open=todayTasks.filter(x=>!x.done).length;
-    return '<section class="panel s12 hyrule-status"><div class="hyrule-status-head"><div><div class="eyebrow">YOUR ADVENTURE, YOUR PACE</div><h2>HERO LEVEL '+level()+'</h2><p class="muted">'+total().toLocaleString()+' SPIRIT ORBS EARNED</p></div><div class="hyrule-triforce">△</div></div><div class="hyrule-orbbar"><span style="width:'+progress()+'%"></span></div><div class="row between"><small class="muted">'+progress()+' / 100 to next level</small><small class="muted">'+done+' daily quests completed · '+open+' left today</small></div></section>';
+    return '<section class="panel s12 hyrule-status"><div class="hyrule-status-head"><div><div class="eyebrow">YOUR ADVENTURE, YOUR PACE</div><h2>HERO LEVEL '+level()+'</h2><p class="muted">'+earned().toLocaleString()+' SPIRIT ORBS EARNED</p></div><div class="hyrule-triforce">△</div></div><div class="hyrule-orbbar"><span style="width:'+progress()+'%"></span></div><div class="row between"><small class="muted">'+progress()+' / 100 to next level</small><small class="muted">'+done+' daily quests completed · '+open+' left today</small></div></section>';
   }
   function dailyQuestBoard(){
     const items=db.daily?.[today()]?.todo||[];
@@ -85,7 +86,7 @@
     const earned=H.badges.map(b=>'<div class="hyrule-item"><div><b>'+b.icon+' '+safe(b.name)+'</b><small>'+safe(b.desc)+' · '+new Date(b.date).toLocaleDateString()+'</small></div><span class="tag">EARNED</span></div>').join("")||'<p class="muted">No medals yet. They unlock naturally as you make progress.</p>';
     const locked=badgeRules.filter(b=>!H.badges.some(x=>x.id===b.id)).map(b=>'<div class="hyrule-item"><div><b>◇ '+safe(b.name)+'</b><small>'+safe(b.desc)+'</small></div><span class="tag">LOCKED</span></div>').join("");
     const memories=H.memories.length;
-    return '<div class="grid"><section class="panel s6"><h3>HERO LEVEL</h3><div class="big">'+level()+'</div><p class="muted">'+total()+' total Spirit Orbs · '+progress()+'/100 toward next level</p><div class="hyrule-orbbar"><span style="width:'+progress()+'%"></span></div></section><section class="panel s6"><h3>YOUR RECORD</h3><div class="stat"><span>Daily quests completed</span><b>'+completedDailyTasks()+'</b></div><div class="stat"><span>Main quests completed</span><b>'+H.projects.filter(x=>x.done).length+'</b></div><div class="stat"><span>Moments recorded</span><b>'+memories+'</b></div><div class="stat"><span>Medals earned</span><b>'+H.badges.length+'</b></div></section><section class="panel s12"><h3>MEDAL CASE · EARNED</h3>'+earned+'</section><section class="panel s12"><h3>ON THE HORIZON</h3>'+locked+'</section></div>';
+    return '<div class="grid"><section class="panel s6"><h3>HERO LEVEL</h3><div class="big">'+level()+'</div><p class="muted">'+earned()+' Spirit Orbs earned · '+progress()+'/100 toward next level</p><div class="hyrule-orbbar"><span style="width:'+progress()+'%"></span></div></section><section class="panel s6"><h3>YOUR RECORD</h3><div class="stat"><span>Daily quests completed</span><b>'+completedDailyTasks()+'</b></div><div class="stat"><span>Main quests completed</span><b>'+H.projects.filter(x=>x.done).length+'</b></div><div class="stat"><span>Moments recorded</span><b>'+memories+'</b></div><div class="stat"><span>Medals earned</span><b>'+H.badges.length+'</b></div></section><section class="panel s12"><h3>MEDAL CASE · EARNED</h3>'+earned+'</section><section class="panel s12"><h3>ON THE HORIZON</h3>'+locked+'</section></div>';
   }
   function rewardsPage(){
     const available=H.rewards.filter(x=>!x.archived).map(r=>'<div class="hyrule-item"><div><b>🎁 '+safe(r.name)+'</b><small>'+r.cost+' Spirit Orbs · Redeemed '+(r.redeemed||0)+' times</small></div><div class="row"><button class="btn gold" onclick="hyruleRedeem(\''+r.id+'\')" '+(total()<r.cost?'disabled':'')+'>Redeem</button><button class="btn danger" onclick="hyruleRemove(\'rewards\',\''+r.id+'\')">×</button></div></div>').join("")||'<p class="muted">Add a reward you would genuinely enjoy. Keep it realistic.</p>';
