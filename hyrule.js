@@ -114,7 +114,75 @@
   window.hyruleRedeem=idValue=>{const r=H.rewards.find(x=>x.id===idValue);if(!r||total()<r.cost)return;H.orbEvents.unshift({id:id(),amount:-r.cost,reason:"Treasure redeemed: "+r.name,date:new Date().toISOString()});r.redeemed=(r.redeemed||0)+1;checkBadges();save();render()};
   window.hyruleToggleList=idValue=>{const x=H.lists.find(x=>x.id===idValue);if(x)x.done=!x.done;save();render()};
   window.hyruleRemove=(key,idValue)=>{if(!Array.isArray(H[key]))return;H[key]=H[key].filter(x=>x.id!==idValue);save();render()};
-  const routes={hyruleProjects:projectsPage, hyruleAchievements:achievementsPage, hyruleRewards:rewardsPage, hyruleLists:listsPage, hyruleMemories:memoriesPage};
+
+  // Symptom and wellness journal
+  H.symptoms=Array.isArray(H.symptoms)?H.symptoms:[];
+  H.calendarEvents=Array.isArray(H.calendarEvents)?H.calendarEvents:[];
+  let healthDate=today(),calendarDate=today(),calendarMode="month";
+  const symptomOptions=["Pain","Headache","Migraine","Fatigue","Dizziness","Nausea","Digestive issues","Bloating","Sleep trouble","Anxiety","Stress","Mood changes","Hot flashes","Skin changes","Other"];
+  function symptomsPage(){
+    const day=H.symptoms.filter(x=>x.date===healthDate).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
+    const all=[...H.symptoms].sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
+    const avg=all.length?(all.reduce((n,x)=>n+(+x.severity||0),0)/all.length).toFixed(1):"—";
+    const counts={};all.forEach(x=>counts[x.name]=(counts[x.name]||0)+1);
+    const common=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    return '<div class="eyebrow">HEALTH JOURNAL · NOTICE PATTERNS, NOT PERFECTION</div><div class="grid" style="margin-top:12px">'+
+      '<section class="panel s12"><div class="row between"><div><h3>SYMPTOM & WELLNESS LOG</h3><p class="muted">Record what happened, when, and how it affected you.</p></div><input id="healthDate" type="date" value="'+healthDate+'" onchange="healthDate=this.value;render()" style="max-width:155px"></div>'+
+      '<form id="symptomForm" class="grid"><div class="s6"><label>Symptom / experience</label><select name="name">'+symptomOptions.map(x=>'<option>'+safe(x)+'</option>').join("")+'</select></div><div class="s3"><label>Time</label><input name="time" type="time" value="'+new Date().toTimeString().slice(0,5)+'"></div><div class="s3"><label>Severity · 1–10</label><input name="severity" type="number" min="1" max="10" value="3" required></div><div class="s6"><label>Duration</label><input name="duration" placeholder="e.g. 30 minutes, all day"></div><div class="s6"><label>Possible trigger</label><input name="trigger" placeholder="Food, stress, activity, cycle, unknown…"></div><div class="s6"><label>Energy level</label><select name="energy"><option value="">Not recorded</option><option>Very low</option><option>Low</option><option>Okay</option><option>Good</option><option>High</option></select></div><div class="s6"><label>Mood / general wellness</label><select name="mood"><option value="">Not recorded</option><option>Great</option><option>Good</option><option>Okay</option><option>Low</option><option>Anxious</option><option>Overwhelmed</option></select></div><div class="s12"><label>Notes</label><textarea name="notes" placeholder="What did it feel like? What helped? Anything else worth noting?"></textarea></div><div class="s12"><button class="btn gold">Save entry</button></div></form></section>'+
+      '<section class="panel s4"><h3>YOUR LOG AT A GLANCE</h3><div class="big">'+all.length+'</div><p class="muted">Entries recorded</p><div class="stat"><span>Average severity</span><b>'+avg+'/10</b></div><div class="stat"><span>Symptoms tracked</span><b>'+Object.keys(counts).length+'</b></div></section>'+
+      '<section class="panel s8"><h3>MOST FREQUENTLY LOGGED</h3>'+ (common.map(([n,c])=>'<div class="stat"><span>'+safe(n)+'</span><b>'+c+' entries</b></div>').join("")||'<p class="muted">Your patterns will appear here as you log entries.</p>')+'</section>'+
+      '<section class="panel s12"><h3>ENTRIES · '+new Date(healthDate+"T12:00:00").toLocaleDateString([],{weekday:"long",month:"long",day:"numeric",year:"numeric"})+'</h3>'+
+      (day.map(x=>'<div class="hyrule-item"><div><b>'+safe(x.name)+' · '+x.severity+'/10</b><small>'+safe(x.time||"Time not set")+(x.duration?' · '+safe(x.duration):'')+(x.trigger?' · Trigger: '+safe(x.trigger):'')+'</small>'+(x.notes?'<p class="muted">'+safe(x.notes)+'</p>':'')+(x.energy||x.mood?'<small>'+[x.energy?'Energy: '+x.energy:'',x.mood?'Wellness: '+x.mood:''].filter(Boolean).join(" · ")+'</small>':'')+'</div><button class="btn danger" onclick="deleteSymptom(\''+x.id+'\')">Delete</button></div>').join("")||'<p class="muted">No entries for this date. Use the form above to add one.</p>')+'</section>'+
+      '<section class="panel s12"><h3>HISTORY · RECENT ENTRIES</h3>'+(all.slice(0,30).map(x=>'<div class="stat"><span>'+safe(x.date)+' · '+safe(x.name)+' <small class="muted">'+safe(x.time||"")+'</small></span><b>'+x.severity+'/10</b></div>').join("")||'<p class="muted">Your history will build here.</p>')+'</section></div>';
+  }
+  window.healthDate=healthDate;
+  window.deleteSymptom=idValue=>{H.symptoms=H.symptoms.filter(x=>x.id!==idValue);save();render()};
+  function bindSymptomForm(){const f=$("symptomForm");if(!f)return;f.onsubmit=e=>{e.preventDefault();const o=Object.fromEntries(new FormData(f));H.symptoms.unshift({id:id(),date:$("healthDate")?.value||healthDate,...o,severity:Math.max(1,Math.min(10,+o.severity||1)),createdAt:new Date().toISOString()});healthDate=$("healthDate")?.value||healthDate;save();render()}}
+  // Calendar with month, week and day views; events are stored locally.
+  const calDate=s=>new Date(s+"T12:00:00");
+  const calKey=d=>dateKey(d);
+  const calAdd=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+  const calStartWeek=d=>calAdd(d,-d.getDay());
+  const calOccurs=(ev,day)=>{if(ev.date===day)return true;if(!ev.repeat||ev.repeat==="Never"||day<ev.date)return false;const a=calDate(ev.date),b=calDate(day);if(ev.repeat==="Daily")return true;if(ev.repeat==="Weekly")return a.getDay()===b.getDay();if(ev.repeat==="Monthly")return a.getDate()===b.getDate();return false};
+  function calEventChip(ev,day){return '<button class="cal-event '+safe(ev.category||"Personal")+'" onclick="editCalendarEvent(\''+ev.id+'\')" title="'+safe(ev.title)+'">'+(ev.allDay?'':'<small>'+safe(ev.time||'')+'</small> ')+safe(ev.title)+'</button>'}
+  function calendarPage(){
+    const d=calDate(calendarDate),month=d.getMonth(),year=d.getFullYear(),first=new Date(year,month,1),start=calStartWeek(first),days=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    const events=H.calendarEvents;
+    const header='<div class="row between calendar-toolbar"><button class="btn" onclick="calendarMove(-1)">‹</button><h2>'+d.toLocaleDateString([],{month:"long",year:"numeric"})+'</h2><button class="btn" onclick="calendarMove(1)">›</button></div><div class="row between calendar-controls"><button class="btn" onclick="calendarToday()">Today</button><div class="row"><button class="btn '+(calendarMode==="month"?"gold":"")+'" onclick="calendarSetMode(\'month\')">Month</button><button class="btn '+(calendarMode==="week"?"gold":"")+'" onclick="calendarSetMode(\'week\')">Week</button><button class="btn '+(calendarMode==="day"?"gold":"")+'" onclick="calendarSetMode(\'day\')">Day</button></div><button class="btn gold" onclick="newCalendarEvent(\''+calendarDate+'\')">+ Event</button></div>';
+    let body="";
+    if(calendarMode==="month"){
+      const cells=Array.from({length:42},(_,i)=>{const day=calAdd(start,i),key=calKey(day),inMonth=day.getMonth()===month,found=events.filter(e=>calOccurs(e,key)).slice(0,3);return '<div class="cal-cell '+(inMonth?'':'outside')+(key===today()?' today':'')+'"><button class="cal-date" onclick="calendarChoose(\''+key+'\')">'+day.getDate()+'</button>'+found.map(e=>calEventChip(e,key)).join("")+(events.filter(e=>calOccurs(e,key)).length>3?'<small>+'+(events.filter(e=>calOccurs(e,key)).length-3)+' more</small>':'')+'</div>'}).join("");
+      body='<div class="calendar-month"><div class="cal-weekdays">'+days.map(x=>'<b>'+x+'</b>').join("")+'</div><div class="cal-month-grid">'+cells+'</div></div>';
+    }else{
+      const start=calendarMode==="week"?calStartWeek(d):d,span=calendarMode==="week"?7:1;
+      body='<div class="calendar-agenda">'+Array.from({length:span},(_,i)=>{const day=calAdd(start,i),key=calKey(day),list=events.filter(e=>calOccurs(e,key)).sort((a,b)=>(a.time||"").localeCompare(b.time||""));return '<section class="cal-agenda-day '+(key===today()?'today':'')+'"><button class="cal-date" onclick="calendarChoose(\''+key+'\')">'+day.toLocaleDateString([],{weekday:"long",month:"short",day:"numeric"})+'</button>'+(list.map(e=>calEventChip(e,key)).join("")||'<p class="muted">No events</p>')+'</section>'}).join("")+'</div>';
+    }
+    const upcoming=events.filter(e=>e.date>=today()).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).slice(0,5);
+    return '<div class="eyebrow">HYRULE CALENDAR · YOUR TIME, YOUR ADVENTURES</div><section class="panel s12 calendar-panel">'+header+body+'</section><div class="grid"><section class="panel s12"><h3>UP NEXT</h3>'+(upcoming.map(e=>'<div class="stat"><span>'+safe(e.date)+' · '+safe(e.title)+'</span><b>'+safe(e.time||"All day")+'</b></div>').join("")||'<p class="muted">No upcoming events yet.</p>')+'</section></div>';
+  }
+  function calEventForm(existing,selected){
+    const e=existing||{title:"",date:selected||calendarDate,time:"09:00",endTime:"10:00",category:"Personal",repeat:"Never",allDay:false,notes:""};
+    return '<section class="panel s12 calendar-editor"><div class="row between"><h3>'+(existing?'EDIT EVENT':'NEW EVENT')+'</h3><button class="btn" onclick="render()">Close</button></div><form id="calendarEventForm" class="grid"><div class="s8"><label>Event</label><input name="title" required maxlength="100" value="'+safe(e.title)+'" placeholder="Appointment, reminder, plans…"></div><div class="s4"><label>Category</label><select name="category">'+["Personal","Health","Work","Home","Fun","Important"].map(x=>'<option '+(e.category===x?'selected':'')+'>'+x+'</option>').join("")+'</select></div><div class="s4"><label>Date</label><input name="date" type="date" required value="'+safe(e.date)+'"></div><div class="s4"><label>Start time</label><input name="time" type="time" value="'+safe(e.time||"")+'"></div><div class="s4"><label>End time</label><input name="endTime" type="time" value="'+safe(e.endTime||"")+'"></div><div class="s4"><label>Repeat</label><select name="repeat">'+["Never","Daily","Weekly","Monthly"].map(x=>'<option '+((e.repeat||"Never")===x?'selected':'')+'>'+x+'</option>').join("")+'</select></div><div class="s4"><label><input type="checkbox" name="allDay" '+(e.allDay?'checked':'')+'> All day</label></div><div class="s12"><label>Notes</label><textarea name="notes">'+safe(e.notes||"")+'</textarea></div><div class="s12 row"><button class="btn gold">Save event</button>'+(existing?'<button type="button" class="btn danger" onclick="deleteCalendarEvent(\''+existing.id+'\')">Delete</button>':'')+'</div></form></section>';
+  }
+  let editingCalendarId=null;
+  window.calendarChoose=s=>{calendarDate=s;calendarMode="day";render()};
+  window.calendarSetMode=m=>{calendarMode=m;render()};
+  window.calendarToday=()=>{calendarDate=today();render()};
+  window.calendarMove=n=>{const d=calDate(calendarDate);if(calendarMode==="month")d.setMonth(d.getMonth()+n);else d.setDate(d.getDate()+n*(calendarMode==="week"?7:1));calendarDate=calKey(d);render()};
+  window.newCalendarEvent=s=>{editingCalendarId=null;$("view").insertAdjacentHTML("beforeend",calEventForm(null,s));bindCalendarForm()};
+  window.editCalendarEvent=idValue=>{const e=H.calendarEvents.find(x=>x.id===idValue);if(!e)return;editingCalendarId=idValue;const old=$("calendarEditor");if(old)old.remove();$("view").insertAdjacentHTML("beforeend",calEventForm(e));bindCalendarForm()};
+  window.deleteCalendarEvent=idValue=>{H.calendarEvents=H.calendarEvents.filter(x=>x.id!==idValue);editingCalendarId=null;save();render()};
+  function bindCalendarForm(){const f=$("calendarEventForm");if(!f)return;f.onsubmit=e=>{e.preventDefault();const o=Object.fromEntries(new FormData(f));o.allDay=!!f.elements.allDay.checked;const record={id:editingCalendarId||id(),...o};if(editingCalendarId){const ix=H.calendarEvents.findIndex(x=>x.id===editingCalendarId);if(ix>=0)H.calendarEvents[ix]=record}else H.calendarEvents.unshift(record);calendarDate=o.date;editingCalendarId=null;save();render()}}
+  window.calendarEventForm=calEventForm;
+  window.calendarDate=calendarDate;
+  window.calendarMove=window.calendarMove;
+  window.calendarSetMode=window.calendarSetMode;
+  window.calendarToday=window.calendarToday;
+  window.newCalendarEvent=window.newCalendarEvent;
+  window.editCalendarEvent=window.editCalendarEvent;
+  window.deleteCalendarEvent=window.deleteCalendarEvent;
+
+  const routes={hyruleProjects:projectsPage, hyruleAchievements:achievementsPage, hyruleRewards:rewardsPage, hyruleLists:listsPage, hyruleMemories:memoriesPage, hyruleSymptoms:symptomsPage, hyruleCalendar:calendarPage};
   Object.entries(routes).forEach(([k,v])=>{window[k]=v;if(!pages.some(p=>p[0]===k))pages.push([k,"◇",({hyruleProjects:"Main Quests",hyruleAchievements:"Hero's Journey",hyruleRewards:"Treasure Chest",hyruleLists:"Personal Lists",hyruleMemories:"Memory Book"})[k]])});
   const previousRender=window.render;
   window.render=function(){if(routes[page]){document.body.dataset.page=page;$("view").innerHTML='<div class="dashboard-return"><button class="btn dashboard-back" onclick="go(\'home\')">← BACK TO DASHBOARD</button></div>'+routes[page]();bindForms();return}previousRender()};
