@@ -1,4 +1,4 @@
-const CACHE = "hyrule-command-center-v14";
+const CACHE = "hyrule-command-center-v15";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg", "./hyrule.js", "./app.js"];
 
 self.addEventListener("install", event => {
@@ -23,7 +23,7 @@ self.addEventListener("fetch", event => {
   const url = new URL(event.request.url);
   const isAppShell = event.request.mode === "navigate" ||
     url.pathname.endsWith("/index.html") ||
-    url.pathname.endsWith("/rpg.js") || url.pathname.endsWith("/hyrule.js");
+    url.pathname.endsWith("/rpg.js") || url.pathname.endsWith("/hyrule.js") || url.pathname.endsWith("/app.js");
 
   if (isAppShell) {
     event.respondWith(
