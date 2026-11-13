@@ -140,7 +140,27 @@ input,textarea,select{background:#081923;color:#f3f0dc;border-color:#547b7b}labe
 .module>i,.module>.tile-art,.hyrule-module>i,.hyrule-module>.tile-art{display:none!important}
 .module,.hyrule-module{align-content:center!important;gap:0!important}
 .module b,.hyrule-module b{margin:0!important;font-size:clamp(12px,3.2vw,16px)!important;letter-spacing:.1em!important}
-</style></head><body><svg aria-hidden="true" width="0" height="0" style="position:absolute;left:-10000px;top:-10000px"><defs><clipPath id="majora-mask-clip" clipPathUnits="objectBoundingBox"><path d="M .28 .22 C .25 .20 .25 .14 .26 .08 L .28 .015 C .30 -.005 .31 .025 .32 .06 L .39 .20 C .43 .25 .47 .27 .50 .28 C .53 .27 .57 .25 .61 .20 L .68 .06 C .69 .025 .70 -.005 .72 .015 L .74 .08 C .75 .14 .75 .20 .72 .22 C .86 .22 .94 .31 .93 .43 C .93 .50 .89 .56 .86 .62 L .99 .68 L .84 .69 L .94 .80 L .77 .77 L .87 .92 L .68 .84 L .64 .99 L .50 .90 L .36 .99 L .32 .84 L .13 .92 L .23 .77 L .06 .80 L .16 .69 L .01 .68 L .14 .62 C .11 .56 .07 .50 .07 .43 C .06 .31 .14 .22 .28 .22 Z"/></clipPath></defs></svg><div class="top"><span id="topGreeting">WELCOME, HERO</span><b>THE KINGDOM AWAITS</b><span id="clock"></span></div><div class="wrap"><div class="hero"><div><div class="eyebrow" id="greet">WELCOME, HERO</div><h1 id="title">WELCOME, HERO</h1><div class="muted" id="dateLabel"></div></div><button class="btn" onclick="go('settings')">⚙ Settings</button></div><div class="bar"><span id="xp"></span></div><div class="barlabel"><span>SPIRIT ORBS TODAY</span><span id="xptext">0 / 100</span></div><nav id="nav" style="display:none!important" aria-hidden="true"></nav><main id="view"></main><div class="foot">LOCAL HERO RECORDS · EXPORT BACKUPS REGULARLY · HYRULE ADVENTURE RECORDS</div></div>
-<script src="app.js?v=27"></script>
 
-<script src="hyrule.js?v=27"></script><script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}</script></body></html>
+/* Larger, cleaner destination labels */
+.module b,.hyrule-module b{
+  display:block!important;
+  width:100%!important;
+  max-width:92%!important;
+  margin:0 auto!important;
+  padding:8px 5px!important;
+  color:#fff4d6!important;
+  font-family:Georgia,serif!important;
+  font-size:clamp(16px,4.4vw,21px)!important;
+  font-weight:700!important;
+  line-height:1.15!important;
+  letter-spacing:.075em!important;
+  text-align:center!important;
+  text-transform:uppercase!important;
+  text-shadow:0 1px 2px #090713,0 0 5px #090713,0 0 11px #e51be8aa,0 0 15px #20d9ff66!important;
+  overflow-wrap:anywhere!important;
+}
+.module,.hyrule-module{align-content:center!important;justify-items:center!important}
+</style></head><body><svg aria-hidden="true" width="0" height="0" style="position:absolute;left:-10000px;top:-10000px"><defs><clipPath id="majora-mask-clip" clipPathUnits="objectBoundingBox"><path d="M .28 .22 C .25 .20 .25 .14 .26 .08 L .28 .015 C .30 -.005 .31 .025 .32 .06 L .39 .20 C .43 .25 .47 .27 .50 .28 C .53 .27 .57 .25 .61 .20 L .68 .06 C .69 .025 .70 -.005 .72 .015 L .74 .08 C .75 .14 .75 .20 .72 .22 C .86 .22 .94 .31 .93 .43 C .93 .50 .89 .56 .86 .62 L .99 .68 L .84 .69 L .94 .80 L .77 .77 L .87 .92 L .68 .84 L .64 .99 L .50 .90 L .36 .99 L .32 .84 L .13 .92 L .23 .77 L .06 .80 L .16 .69 L .01 .68 L .14 .62 C .11 .56 .07 .50 .07 .43 C .06 .31 .14 .22 .28 .22 Z"/></clipPath></defs></svg><div class="top"><span id="topGreeting">WELCOME, HERO</span><b>THE KINGDOM AWAITS</b><span id="clock"></span></div><div class="wrap"><div class="hero"><div><div class="eyebrow" id="greet">WELCOME, HERO</div><h1 id="title">WELCOME, HERO</h1><div class="muted" id="dateLabel"></div></div><button class="btn" onclick="go('settings')">⚙ Settings</button></div><div class="bar"><span id="xp"></span></div><div class="barlabel"><span>SPIRIT ORBS TODAY</span><span id="xptext">0 / 100</span></div><nav id="nav" style="display:none!important" aria-hidden="true"></nav><main id="view"></main><div class="foot">LOCAL HERO RECORDS · EXPORT BACKUPS REGULARLY · HYRULE ADVENTURE RECORDS</div></div>
+<script src="app.js?v=28"></script>
+
+<script src="hyrule.js?v=28"></script><script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}</script></body></html>
