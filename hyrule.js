@@ -87,7 +87,7 @@
   }
   window.hyruleFinishQuest=idValue=>{const q=H.quests.find(x=>x.id===idValue);if(!q||q.done)return;q.done=true;q.completedAt=new Date().toISOString();award(q.reward,"Quest complete: "+q.name);render()};
   window.hyruleFinishProject=idValue=>{const p=H.projects.find(x=>x.id===idValue);if(!p||p.done)return;p.done=true;p.completedAt=new Date().toISOString();award(40,"Main quest complete: "+p.name);render()};
-  window.hyruleRedeem=idValue=>{const r=H.rewards.find(x=>x.id===idValue);if(!r||total()<r.cost)return;H.orbEvents.unshift({id:id(),amount:-r.cost,reason:"Treasure redeemed: "+r.name,date:new Date().toISOString()});r.redeemed=(r.redeemed||0)+1;save();render()};
+  window.hyruleRedeem=idValue=>{const r=H.rewards.find(x=>x.id===idValue);if(!r||total()<r.cost)return;H.orbEvents.unshift({id:id(),amount:-r.cost,reason:"Treasure redeemed: "+r.name,date:new Date().toISOString()});r.redeemed=(r.redeemed||0)+1;checkBadges();save();render()};
   window.hyruleToggleList=idValue=>{const x=H.lists.find(x=>x.id===idValue);if(x)x.done=!x.done;save();render()};
   window.hyruleRemove=(key,idValue)=>{if(!Array.isArray(H[key]))return;H[key]=H[key].filter(x=>x.id!==idValue);save();render()};
   const routes={hyruleQuests:questsPage, hyruleProjects:projectsPage, hyruleAchievements:achievementsPage, hyruleRewards:rewardsPage, hyruleLists:listsPage, hyruleMemories:memoriesPage};
