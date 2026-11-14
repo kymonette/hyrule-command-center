@@ -244,6 +244,20 @@
 
   function install() {
     styles();
+    if (typeof window.go === "function" && !window.go.__partnerWrapped) {
+      const originalGo = window.go;
+      const wrappedGo = function (p) {
+        document.body.dataset.page = p;
+        const result = originalGo.apply(this, arguments);
+        if (p === "partnerInbox" && state.user) {
+          loadMessages(true).then(() => { if (document.body.dataset.page === "partnerInbox") window.render(); });
+        }
+        return result;
+      };
+      wrappedGo.__partnerWrapped = true;
+      window.go = wrappedGo;
+      try { go = wrappedGo; } catch (_) {}
+    }
     if (Array.isArray(pages) && !pages.some(p => p[0] === "partnerInbox")) {
       pages.push(["partnerInbox", "✉", "Partner Inbox"]);
     }
