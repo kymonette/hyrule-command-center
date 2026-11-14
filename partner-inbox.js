@@ -233,13 +233,12 @@
   };
 
   window.partnerInboxRefresh = async function () {
-    await loadMessages();
+    await loadMessages(true);
     window.render();
   };
 
   window.partnerInboxPage = function () {
     styles();
-    if (state.user) loadMessages(true);
     return pageHtml();
   };
 
