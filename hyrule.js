@@ -7,10 +7,20 @@
   const $=id=>document.getElementById(id);
   const safe=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const id=()=>crypto.randomUUID();
+  // One heart piece replaces five legacy heart pieces. Migrate once without losing history.
+  if(!H.heartPieceMigration){
+    H.orbEvents.forEach(e=>{e.amount=(+e.amount||0)/5});
+    H.quests.forEach(q=>{q.reward=(+q.reward||0)/5});
+    H.rewards.forEach(r=>{r.cost=(+r.cost||0)/5});
+    H.heartPieceMigration=1;
+    save();
+  }
+  const heartDisplay=n=>Number(n).toLocaleString(undefined,{maximumFractionDigits:1});
+  const heartMeter=()=>'<span class="heart-icons" aria-label="'+(Math.floor(Math.max(0,earned())/4))+' complete heart containers">❤️ '.repeat(Math.min(12,Math.floor(Math.max(0,earned())/4)))+'</span><span class="heart-pieces"> '+heartDisplay(earned()%4)+'/4 heart pieces toward next container</span>';
   const total=()=>H.orbEvents.reduce((n,x)=>n+(+x.amount||0),0);
   const earned=()=>H.orbEvents.reduce((n,x)=>n+Math.max(0,+x.amount||0),0);
-  const level=()=>Math.floor(earned()/100)+1;
-  const progress=()=>earned()%100;
+  const level=()=>Math.floor(earned()/4)+1;
+  const progress=()=>Math.round((earned()%4)/4*100);
   const categories=["Daily Life","Work","Health & Wellness","Home","Personal Growth","Fun & Hobbies"];
   const completedDailyTasks=()=>Object.values(db.daily||{}).reduce((n,d)=>n+(d.todo||[]).filter(t=>t.done).length,0);
   const badgeRules=[
@@ -26,7 +36,7 @@
     badgeRules.forEach(b=>{if(b.test()&&!H.badges.some(x=>x.id===b.id)){H.badges.unshift({id:b.id,name:b.name,icon:b.icon,desc:b.desc,date:new Date().toISOString()});naviCelebrate("badge",b.name)}});
   }
   function award(amount,reason){
-    amount=Math.max(0,Math.min(500,+amount||0));if(!amount)return;
+    amount=Math.max(0,Math.min(100,+amount||0));if(!amount)return;
     H.orbEvents.unshift({id:id(),amount,reason:String(reason||"A little progress").trim(),date:new Date().toISOString()});
     checkBadges();save();
   }
@@ -53,18 +63,18 @@
   window.hyruleNaviPanel=naviPanel;
   function status(){
     const done=completedDailyTasks(),todayTasks=db.daily?.[today()]?.todo||[],open=todayTasks.filter(x=>!x.done).length;
-    return '<section class="panel s12 hyrule-status"><div class="hyrule-status-head"><div><div class="eyebrow">YOUR ADVENTURE, YOUR PACE</div><h2>HERO LEVEL '+level()+'</h2><p class="muted">'+earned().toLocaleString()+' SPIRIT ORBS EARNED</p></div><div class="hyrule-triforce">△</div></div><div class="hyrule-orbbar"><span style="width:'+progress()+'%"></span></div><div class="row between"><small class="muted">'+progress()+' / 100 to next level</small><small class="muted">'+done+' daily quests completed · '+open+' left today</small></div></section>';
+    return '<section class="panel s12 hyrule-status"><div class="hyrule-status-head"><div><div class="eyebrow">YOUR ADVENTURE, YOUR PACE</div><h2>HEART CONTAINERS COLLECTED '+Math.floor(earned()/4)+'</h2><p class="muted">'+heartDisplay(earned())+' HEART PIECES EARNED</p></div><div class="hyrule-triforce">△</div></div><div class="hyrule-orbbar"><span style="width:'+progress()+'%"></span></div><div class="row between"><small class="muted">'+heartDisplay(earned()%4)+' / 4 pieces to next heart container</small><small class="muted">'+done+' daily quests completed · '+open+' left today</small></div></section>';
   }
   function dailyQuestBoard(){
     const items=db.daily?.[today()]?.todo||[];
-    const rows=items.map((t,i)=>'<label class="hyrule-daily-quest '+(t.done?'is-done':'')+'"><input type="checkbox" '+(t.done?'checked':'')+' onchange="hyruleDailyTaskToggle(\''+String(t.id||('legacy-'+i)).replace(/'/g,"&#39;")+'\',this.checked)"><span>'+safe(t.text)+'</span><small>'+(t.done?'✓ REWARD CLAIMED':'+10 SPIRIT ORBS')+'</small></label>').join('');
+    const rows=items.map((t,i)=>'<label class="hyrule-daily-quest '+(t.done?'is-done':'')+'"><input type="checkbox" '+(t.done?'checked':'')+' onchange="hyruleDailyTaskToggle(\''+String(t.id||('legacy-'+i)).replace(/'/g,"&#39;")+'\',this.checked)"><span>'+safe(t.text)+'</span><small>'+(t.done?'✓ REWARD CLAIMED':'+2 HEART PIECES')+'</small></label>').join('');
     return '<section class="panel s12 hyrule-quest-board"><div class="row between"><div><div class="eyebrow">TODAY’S QUEST BOARD</div><h3>DAILY QUESTS</h3></div><button class="btn gold" onclick="go(\'daily\')">Manage quests</button></div>'+(rows||'<p class="muted">No quests on today’s board yet. Add them on your Daily Page and they’ll appear here automatically.</p>')+'</section>';
   }
   function awardDailyTask(task,date){
     if(!task)return;
     task.id=task.id||id();
     if(H.orbEvents.some(e=>e.taskId===String(task.id)))return;
-    H.orbEvents.unshift({id:'daily-task:'+task.id,taskId:String(task.id),amount:10,reason:'Daily quest completed: '+String(task.text||'Task').trim(),date:new Date().toISOString(),taskDate:date||today()});
+    H.orbEvents.unshift({id:'daily-task:'+task.id,taskId:String(task.id),amount:2,reason:'Daily quest completed: '+String(task.text||'Task').trim(),date:new Date().toISOString(),taskDate:date||today()});
     checkBadges();naviCelebrate("quest",task.text);save();
   }
   window.hyruleDailyTaskToggle=function(taskId,checked){
@@ -88,30 +98,30 @@
     return '<button class="module hyrule-module" onclick="go(\''+key+'\')">'+hyruleMaskOutline()+'<i>'+icon+'</i><b>'+title+'</b><small>'+sub+'</small></button>';
   }
   function homeExtras(){
-    const recent=H.orbEvents.slice(0,3).map(x=>'<div class="stat"><span>'+safe(x.reason)+'</span><b>+'+x.amount+' orbs</b></div>').join("")||'<p class="muted">Your first reward is waiting for a meaningful win.</p>';
+    const recent=H.orbEvents.slice(0,3).map(x=>'<div class="stat"><span>'+safe(x.reason)+'</span><b>+'+heartDisplay(x.amount)+' heart pieces</b></div>').join("")||'<p class="muted">Your first reward is waiting for a meaningful win.</p>';
     const badges=H.badges.slice(0,4).map(x=>'<span class="tag">'+x.icon+' '+safe(x.name)+'</span>').join("")||'<p class="muted">Your first achievement is waiting.</p>';
     return naviPanel()+status()+
       '<div class="grid"><section class="panel s6"><h3>RECENT REWARDS</h3>'+recent+'</section><section class="panel s6"><h3>MEDALS & ACHIEVEMENTS</h3>'+badges+'<p><button class="btn" onclick="go(\'hyruleAchievements\')">View achievement case</button></p></section></div>'+
       '';
   }
   function questsPage(){
-    const items=H.quests.map(q=>'<div class="hyrule-item"><div><b>'+safe(q.name)+'</b><small>'+safe(q.category)+' · '+(q.done?'COMPLETED':'OPEN')+' · '+q.reward+' Spirit Orbs</small>'+(q.notes?'<p class="muted">'+safe(q.notes)+'</p>':'')+'</div><div class="row">'+(q.done?'<span class="tag">✓ DONE</span>':'<button class="btn gold" onclick="hyruleFinishQuest(\''+q.id+'\')">Complete</button>')+'<button class="btn danger" onclick="hyruleRemove(\'quests\',\''+q.id+'\')">×</button></div></div>').join("")||'<p class="muted">Nothing on the quest log yet. Add a task or goal below.</p>';
-    return '<div class="grid"><section class="panel s6"><h3>ADD A QUEST</h3><form id="hyruleQuestForm"><label>Task or goal</label><input name="name" required maxlength="100" placeholder="Something you actually want to get done"><label>Life area</label><select name="category">'+categories.map(x=>'<option>'+x+'</option>').join("")+'</select><label>Importance</label><select name="level"><option value="5">Small win · 5 orbs</option><option value="10" selected>Worthwhile task · 10 orbs</option><option value="20">Big effort · 20 orbs</option></select><label>Notes (optional)</label><input name="notes" maxlength="140" placeholder="Anything to remember"><button class="btn gold">Add to quest log</button></form></section><section class="panel s6"><h3>HOW REWARDS WORK</h3><p class="muted">Spirit Orbs are for progress that matters. Tiny routine actions do not need to become another chore. Choose the reward level honestly.</p><div class="stat"><span>Small win</span><b>5 orbs</b></div><div class="stat"><span>Worthwhile task</span><b>10 orbs</b></div><div class="stat"><span>Big effort</span><b>20 orbs</b></div></section><section class="panel s12"><h3>YOUR QUEST LOG</h3>'+items+'</section></div>';
+    const items=H.quests.map(q=>'<div class="hyrule-item"><div><b>'+safe(q.name)+'</b><small>'+safe(q.category)+' · '+(q.done?'COMPLETED':'OPEN')+' · '+heartDisplay(q.reward)+' Heart Pieces</small>'+(q.notes?'<p class="muted">'+safe(q.notes)+'</p>':'')+'</div><div class="row">'+(q.done?'<span class="tag">✓ DONE</span>':'<button class="btn gold" onclick="hyruleFinishQuest(\''+q.id+'\')">Complete</button>')+'<button class="btn danger" onclick="hyruleRemove(\'quests\',\''+q.id+'\')">×</button></div></div>').join("")||'<p class="muted">Nothing on the quest log yet. Add a task or goal below.</p>';
+    return '<div class="grid"><section class="panel s6"><h3>ADD A QUEST</h3><form id="hyruleQuestForm"><label>Task or goal</label><input name="name" required maxlength="100" placeholder="Something you actually want to get done"><label>Life area</label><select name="category">'+categories.map(x=>'<option>'+x+'</option>').join("")+'</select><label>Importance</label><select name="level"><option value="1">Small win · 1 heart piece</option><option value="2" selected>Worthwhile task · 2 heart pieces</option><option value="4">Big effort · 4 heart pieces</option></select><label>Notes (optional)</label><input name="notes" maxlength="140" placeholder="Anything to remember"><button class="btn gold">Add to quest log</button></form></section><section class="panel s6"><h3>HOW REWARDS WORK</h3><p class="muted">Heart Pieces are for progress that matters. Tiny routine actions do not need to become another chore. Choose the reward level honestly.</p><div class="stat"><span>Small win</span><b>1 heart piece</b></div><div class="stat"><span>Worthwhile task</span><b>2 heart pieces</b></div><div class="stat"><span>Big effort</span><b>4 heart pieces</b></div></section><section class="panel s12"><h3>YOUR QUEST LOG</h3>'+items+'</section></div>';
   }
   function projectsPage(){
     const items=H.projects.map(p=>'<div class="hyrule-item"><div><b>'+safe(p.name)+'</b><small>'+safe(p.category)+' · '+(p.done?'COMPLETED':'IN PROGRESS')+'</small>'+(p.notes?'<p class="muted">'+safe(p.notes)+'</p>':'')+'</div><div class="row">'+(p.done?'<span class="tag">✓ COMPLETE</span>':'<button class="btn gold" onclick="hyruleFinishProject(\''+p.id+'\')">Finish · +40</button>')+'<button class="btn danger" onclick="hyruleRemove(\'projects\',\''+p.id+'\')">×</button></div></div>').join("")||'<p class="muted">No main quests yet. Save this space for projects that take more than one sitting.</p>';
-    return '<div class="grid"><section class="panel s6"><h3>START A MAIN QUEST</h3><form id="hyruleProjectForm"><label>Project or bigger goal</label><input name="name" required maxlength="100" placeholder="A goal with a few steps"><label>Life area</label><select name="category">'+categories.map(x=>'<option>'+x+'</option>').join("")+'</select><label>First steps / notes</label><textarea name="notes" placeholder="What needs to happen?"></textarea><button class="btn gold">Start main quest</button></form></section><section class="panel s6"><h3>THE LONG GAME</h3><p class="muted">Use Main Quests for things that need planning: a home project, a savings goal, a trip, a course, or a personal goal. Finishing one earns 40 Spirit Orbs.</p><div class="big">'+H.projects.filter(x=>x.done).length+'</div><p class="muted">Main quests completed</p></section><section class="panel s12"><h3>ACTIVE & COMPLETED PROJECTS</h3>'+items+'</section></div>';
+    return '<div class="grid"><section class="panel s6"><h3>START A MAIN QUEST</h3><form id="hyruleProjectForm"><label>Project or bigger goal</label><input name="name" required maxlength="100" placeholder="A goal with a few steps"><label>Life area</label><select name="category">'+categories.map(x=>'<option>'+x+'</option>').join("")+'</select><label>First steps / notes</label><textarea name="notes" placeholder="What needs to happen?"></textarea><button class="btn gold">Start main quest</button></form></section><section class="panel s6"><h3>THE LONG GAME</h3><p class="muted">Use Main Quests for things that need planning: a home project, a savings goal, a trip, a course, or a personal goal. Finishing one earns 8 Heart Pieces.</p><div class="big">'+H.projects.filter(x=>x.done).length+'</div><p class="muted">Main quests completed</p></section><section class="panel s12"><h3>ACTIVE & COMPLETED PROJECTS</h3>'+items+'</section></div>';
   }
   function achievementsPage(){
     checkBadges();
     const earned=H.badges.map(b=>'<div class="hyrule-item"><div><b>'+b.icon+' '+safe(b.name)+'</b><small>'+safe(b.desc)+' · '+new Date(b.date).toLocaleDateString()+'</small></div><span class="tag">EARNED</span></div>').join("")||'<p class="muted">No medals yet. They unlock naturally as you make progress.</p>';
     const locked=badgeRules.filter(b=>!H.badges.some(x=>x.id===b.id)).map(b=>'<div class="hyrule-item"><div><b>◇ '+safe(b.name)+'</b><small>'+safe(b.desc)+'</small></div><span class="tag">LOCKED</span></div>').join("");
     const memories=H.memories.length;
-    return '<div class="grid"><section class="panel s6"><h3>HERO LEVEL</h3><div class="big">'+level()+'</div><p class="muted">'+earned()+' Spirit Orbs earned · '+progress()+'/100 toward next level</p><div class="hyrule-orbbar"><span style="width:'+progress()+'%"></span></div></section><section class="panel s6"><h3>YOUR RECORD</h3><div class="stat"><span>Daily quests completed</span><b>'+completedDailyTasks()+'</b></div><div class="stat"><span>Main quests completed</span><b>'+H.projects.filter(x=>x.done).length+'</b></div><div class="stat"><span>Moments recorded</span><b>'+memories+'</b></div><div class="stat"><span>Medals earned</span><b>'+H.badges.length+'</b></div></section><section class="panel s12"><h3>MEDAL CASE · EARNED</h3>'+earned+'</section><section class="panel s12"><h3>ON THE HORIZON</h3>'+locked+'</section></div>';
+    return '<div class="grid"><section class="panel s6"><h3>HEART CONTAINERS</h3><div class="big">'+Math.floor(earned()/4)+'</div><p class="muted">'+heartDisplay(earned())+' Heart Pieces earned · '+heartDisplay(earned()%4)+'/4 pieces toward next heart container</p><div class="hyrule-orbbar"><span style="width:'+progress()+'%"></span></div></section><section class="panel s6"><h3>YOUR RECORD</h3><div class="stat"><span>Daily quests completed</span><b>'+completedDailyTasks()+'</b></div><div class="stat"><span>Main quests completed</span><b>'+H.projects.filter(x=>x.done).length+'</b></div><div class="stat"><span>Moments recorded</span><b>'+memories+'</b></div><div class="stat"><span>Medals earned</span><b>'+H.badges.length+'</b></div></section><section class="panel s12"><h3>MEDAL CASE · EARNED</h3>'+earned+'</section><section class="panel s12"><h3>ON THE HORIZON</h3>'+locked+'</section></div>';
   }
   function rewardsPage(){
-    const available=H.rewards.filter(x=>!x.archived).map(r=>'<div class="hyrule-item"><div><b>🎁 '+safe(r.name)+'</b><small>'+r.cost+' Spirit Orbs · Redeemed '+(r.redeemed||0)+' times</small></div><div class="row"><button class="btn gold" onclick="hyruleRedeem(\''+r.id+'\')" '+(total()<r.cost?'disabled':'')+'>Redeem</button><button class="btn danger" onclick="hyruleRemove(\'rewards\',\''+r.id+'\')">×</button></div></div>').join("")||'<p class="muted">Add a reward you would genuinely enjoy. Keep it realistic.</p>';
-    return '<div class="grid"><section class="panel s6"><h3>SPIRIT ORB BALANCE</h3><div class="big">'+total()+'</div><p class="muted">Earned and available to spend</p></section><section class="panel s6"><h3>ADD A TREASURE</h3><form id="hyruleRewardForm"><label>Reward</label><input name="name" required maxlength="90" placeholder="A small treat, outing or something saved for"><label>Orb cost</label><input name="cost" type="number" min="1" max="5000" value="50" required><button class="btn gold">Add to treasure chest</button></form></section><section class="panel s12"><h3>REWARDS TO UNLOCK</h3>'+available+'</section><section class="panel s12"><h3>SPIRIT ORB HISTORY</h3>'+H.orbEvents.slice(0,20).map(x=>'<div class="stat"><span>'+safe(x.reason)+' <small class="muted">'+new Date(x.date).toLocaleDateString()+'</small></span><b>'+(x.amount>0?'+':'')+x.amount+' ◈</b></div>').join("")+'</section></div>';
+    const available=H.rewards.filter(x=>!x.archived).map(r=>'<div class="hyrule-item"><div><b>🎁 '+safe(r.name)+'</b><small>'+heartDisplay(r.cost)+' Heart Pieces · Redeemed '+(r.redeemed||0)+' times</small></div><div class="row"><button class="btn gold" onclick="hyruleRedeem(\''+r.id+'\')" '+(total()<r.cost?'disabled':'')+'>Redeem</button><button class="btn danger" onclick="hyruleRemove(\'rewards\',\''+r.id+'\')">×</button></div></div>').join("")||'<p class="muted">Add a reward you would genuinely enjoy. Keep it realistic.</p>';
+    return '<div class="grid"><section class="panel s6"><h3>SPIRIT ORB BALANCE</h3><div class="big">'+heartDisplay(total())+'</div><p class="muted">Earned and available to spend</p></section><section class="panel s6"><h3>ADD A TREASURE</h3><form id="hyruleRewardForm"><label>Reward</label><input name="name" required maxlength="90" placeholder="A small treat, outing or something saved for"><label>Heart Piece cost</label><input name="cost" type="number" min="1" max="5000" value="10" required><button class="btn gold">Add to treasure chest</button></form></section><section class="panel s12"><h3>REWARDS TO UNLOCK</h3>'+available+'</section><section class="panel s12"><h3>HEART PIECE HISTORY</h3>'+H.orbEvents.slice(0,20).map(x=>'<div class="stat"><span>'+safe(x.reason)+' <small class="muted">'+new Date(x.date).toLocaleDateString()+'</small></span><b>'+(x.amount>0?'+':'')+x.amount+' ◈</b></div>').join("")+'</section></div>';
   }
   function listsPage(){
     const groups=["Shopping","Packing","Home","Work","Someday","Other"];
@@ -131,7 +141,7 @@
     bind("hyruleMemoryForm",f=>{H.memories.unshift({id:id(),name:f.elements.namedItem("name").value.trim(),category:f.category.value,note:f.note.value.trim(),date:new Date().toISOString()});checkBadges();save();render()});
   }
   window.hyruleFinishQuest=idValue=>{const q=H.quests.find(x=>x.id===idValue);if(!q||q.done)return;q.done=true;q.completedAt=new Date().toISOString();award(q.reward,"Quest complete: "+q.name);render()};
-  window.hyruleFinishProject=idValue=>{const p=H.projects.find(x=>x.id===idValue);if(!p||p.done)return;p.done=true;p.completedAt=new Date().toISOString();award(40,"Main quest complete: "+p.name);naviCelebrate("main",p.name);render()};
+  window.hyruleFinishProject=idValue=>{const p=H.projects.find(x=>x.id===idValue);if(!p||p.done)return;p.done=true;p.completedAt=new Date().toISOString();award(8,"Main quest complete: "+p.name);naviCelebrate("main",p.name);render()};
   window.hyruleRedeem=idValue=>{const r=H.rewards.find(x=>x.id===idValue);if(!r||total()<r.cost)return;H.orbEvents.unshift({id:id(),amount:-r.cost,reason:"Treasure redeemed: "+r.name,date:new Date().toISOString()});r.redeemed=(r.redeemed||0)+1;checkBadges();naviCelebrate("reward",r.name);save();render()};
   window.hyruleToggleList=idValue=>{const x=H.lists.find(x=>x.id===idValue);if(x)x.done=!x.done;save();render()};
   window.hyruleRemove=(key,idValue)=>{if(!Array.isArray(H[key]))return;H[key]=H[key].filter(x=>x.id!==idValue);save();render()};
