@@ -23,8 +23,8 @@ self.addEventListener("push", event => {
   try { data = event.data ? event.data.json() : {}; } catch (_) {}
   event.waitUntil(self.registration.showNotification(data.title || "Planner reminder", {
     body: data.body || "You have a reminder.",
-    icon: "./icon.png",
-    badge: "./icon.png",
+    icon: "./icon-192.png",
+    badge: "./icon-192.png",
     tag: data.tag || "planner-reminder",
     data: { url: data.url || "./" },
     renotify: true
