@@ -60,7 +60,7 @@
   }
   async function initPanel(){
     if(initialized)return; initialized=true;
-    try { await getAuth(); if(!currentUser){status("Sign in through Partner Inbox on this planner first. Notifications are tied to that account.",true);document.getElementById("plannerReminderList").innerHTML='<p class="muted">Sign in to manage reminders.</p>';return;} await loadReminders(); }
+    try { await getAuth(); if(!currentUser){status("Sign in through Partner Inbox on this planner first. Notifications are tied to that account.",true);document.getElementById("plannerReminderList").innerHTML='<p class="muted">Sign in to manage reminders.</p>';return;} await loadReminders(); await loadAutoPrefs(); }
     catch(e){status(e.message||"Could not load notification settings.",true);}
   }
   const AUTO_CATEGORIES = ["morning","habits","evening","weekly"];
