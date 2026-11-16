@@ -164,7 +164,7 @@
             <label for="partnerInboxBody">Anything else on my heart? (optional)</label>
             <textarea id="partnerInboxBody" maxlength="3000" placeholder="Tell me more, send a love note, or just say what's on your mind…"></textarea>
             <input type="hidden" id="partnerInboxType" value="check_in">
-            <div class="partner-actions"><button class="btn gold" type="submit" ${state.loading ? "disabled" : ""}>Send my check-in 💌</button></div>
+            <div class="partner-actions"><button class="btn gold" id="partnerInboxSendButton" type="button" ${state.loading ? "disabled" : ""}>Send my check-in 💌</button></div>
           </form>
         </section>
         <section class="partner-compose"><div class="row between"><h3>Shared conversation</h3><span class="partner-small">${state.messages.length} messages</span></div>
@@ -337,6 +337,27 @@
 
   function install() {
     styles();
+    // Bind the send control with a delegated click listener. This avoids relying
+    // on inline form-submit handlers, which can fail when the planner re-renders
+    // or another page script changes form behavior.
+    if (!window.__partnerInboxSendClickBound) {
+      document.addEventListener("click", function (event) {
+        const button = event.target.closest("#partnerInboxSendButton");
+        if (!button) return;
+        event.preventDefault();
+        if (typeof window.partnerInboxSend !== "function") {
+          const notice = document.getElementById("partnerInboxNotice");
+          if (notice) {
+            notice.style.display = "block";
+            notice.className = "partner-status error";
+            notice.textContent = "The send feature did not load. Refresh the planner and try again.";
+          }
+          return;
+        }
+        window.partnerInboxSend({ preventDefault() {}, submitter: button });
+      });
+      window.__partnerInboxSendClickBound = true;
+    }
     if (typeof window.go === "function" && !window.go.__partnerWrapped) {
       const originalGo = window.go;
       const wrappedGo = function (p) {
