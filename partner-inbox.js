@@ -21,7 +21,7 @@
       month:"short", day:"numeric", year:"numeric", hour:"numeric", minute:"2-digit"
     });
   };
-  const state = { client:null, user:null, messages:[], loading:false, sending:false, composeOpen:true, error:"", note:"", unread:0 };
+  const state = { client:null, user:null, messages:[], loading:false, sending:false, composeOpen:true, error:"", note:"", unread:0, realtimeChannel:null };
   const lastReadKey = () => "partner-inbox-last-read-" + (state.user?.id || "guest");
   let initialized = false;
 
@@ -178,6 +178,32 @@
         </section>
         <p class="partner-small">Only messages in this shared inbox are connected. Your daily pages, habits, budgets, and other planner records stay separate.</p>
       </div>`;
+  }
+
+  function stopRealtime() {
+    if (state.client && state.realtimeChannel) {
+      state.client.removeChannel(state.realtimeChannel);
+      state.realtimeChannel = null;
+    }
+  }
+
+  function startRealtime() {
+    const client = getClient();
+    if (!client || !state.user || state.realtimeChannel) return;
+    state.realtimeChannel = client.channel("partner-mail-" + PAIR_ID)
+      .on("postgres_changes", {
+        event:"INSERT", schema:"public", table:"partner_messages",
+        filter:"pair_id=eq." + PAIR_ID
+      }, payload => {
+        const incoming = payload.new;
+        if (!incoming?.id || state.messages.some(m => m.id === incoming.id)) return;
+        state.messages.push(incoming);
+        state.messages.sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+        if (incoming.sender_id !== state.user?.id) state.unread += 1;
+        updateTileBadge();
+        if (document.body.dataset.page === "partnerInbox") refresh();
+      })
+      .subscribe();
   }
 
   async function loadMessages(markRead = false) {
@@ -417,14 +443,14 @@
       if (client) {
         client.auth.getSession().then(({ data }) => {
           state.user = data?.session?.user || null;
-          if (state.user) loadMessages(document.body.dataset.page === "partnerInbox").then(() => {
+          if (state.user) { startRealtime(); loadMessages(document.body.dataset.page === "partnerInbox").then(() => {
             if (document.body.dataset.page === "partnerInbox" && typeof window.render === "function") window.render();
-          });
+          }); }
         });
         client.auth.onAuthStateChange((_event, session) => {
           state.user = session?.user || null;
-          if (state.user) loadMessages(document.body.dataset.page === "partnerInbox");
-          else { state.messages = []; state.unread = 0; updateTileBadge(); }
+          if (state.user) { startRealtime(); loadMessages(document.body.dataset.page === "partnerInbox"); }
+          else { stopRealtime(); state.messages = []; state.unread = 0; updateTileBadge(); }
           if (document.body.dataset.page === "partnerInbox" && typeof window.render === "function") window.render();
         });
       }
