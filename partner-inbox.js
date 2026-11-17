@@ -441,16 +441,24 @@
       initialized = true;
       const client = getClient();
       if (client) {
-        client.auth.getSession().then(({ data }) => {
-          state.user = data?.session?.user || null;
-          if (state.user) { startRealtime(); loadMessages(document.body.dataset.page === "partnerInbox").then(() => {
-            if (document.body.dataset.page === "partnerInbox" && typeof window.render === "function") window.render();
-          }); }
-        });
-        client.auth.onAuthStateChange((_event, session) => {
+        // Use Supabase's INITIAL_SESSION event as the single session bootstrap.
+        // This avoids racing getSession() against the auth listener and starting
+        // duplicate message loads or realtime subscriptions.
+        client.auth.onAuthStateChange((event, session) => {
           state.user = session?.user || null;
-          if (state.user) { startRealtime(); loadMessages(document.body.dataset.page === "partnerInbox"); }
-          else { stopRealtime(); state.messages = []; state.unread = 0; updateTileBadge(); }
+          if (state.user) {
+            startRealtime();
+            if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+              loadMessages(document.body.dataset.page === "partnerInbox").then(() => {
+                if (document.body.dataset.page === "partnerInbox" && typeof window.render === "function") window.render();
+              });
+            }
+          } else {
+            stopRealtime();
+            state.messages = [];
+            state.unread = 0;
+            updateTileBadge();
+          }
           if (document.body.dataset.page === "partnerInbox" && typeof window.render === "function") window.render();
         });
       }
