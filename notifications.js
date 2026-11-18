@@ -60,8 +60,18 @@
   }
   async function initPanel(){
     if(initialized)return; initialized=true;
-    try { await getAuth(); if(!currentUser){status("Sign in through Partner Inbox on this planner first. Notifications are tied to that account.",true);document.getElementById("plannerReminderList").innerHTML='<p class="muted">Sign in to manage reminders.</p>';return;} await loadReminders(); await loadAutoPrefs(); }
+    try { await getAuth(); if(!currentUser){status("Sign in through Partner Inbox on this planner first. Notifications are tied to that account.",true);document.getElementById("plannerReminderList").innerHTML='<p class="muted">Sign in to manage reminders.</p>';return;} await syncExistingPushSubscription(); await loadReminders(); await loadAutoPrefs(); }
     catch(e){status(e.message||"Could not load notification settings.",true);}
+  }
+  async function syncExistingPushSubscription(){
+    if(!("serviceWorker" in navigator)||!("PushManager" in window)||!("Notification" in window)||Notification.permission!=="granted")return;
+    const {client,user}=await getAuth();if(!user)return;
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.getSubscription();if(!sub)return;
+    const j=sub.toJSON();
+    if(!j.keys?.p256dh||!j.keys?.auth||!j.endpoint)return;
+    const {error}=await client.from("planner_push_subscriptions").upsert({user_id:user.id,planner:PLANNER,endpoint:j.endpoint,p256dh:j.keys.p256dh,auth_secret:j.keys.auth,user_agent:navigator.userAgent,updated_at:new Date().toISOString()},{onConflict:"user_id,planner,endpoint"});
+    if(error)throw error;
   }
   const AUTO_CATEGORIES = ["morning","habits","evening","weekly"];
   const AUTO_DEFAULTS = {morning:"08:00",habits:"18:00",evening:"21:00",weekly:"18:00"};
