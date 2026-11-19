@@ -143,7 +143,7 @@
     try{const {client,user}=await getAuth();if(!user)throw new Error("Sign in first.");const {error}=await client.from("planner_reminders").delete().eq("id",id).eq("user_id",user.id).eq("planner",PLANNER);if(error)throw error;status("Reminder deleted.");await loadReminders();}
     catch(e){status(e.message||"Could not delete reminder.",true);}
   }
-  window.addEventListener("partnerInboxAuthChanged",()=>syncExistingPushSubscription().catch(e=>console.warn("[HYRULE notifications] auth-change registration failed:",e)));
+  window.addEventListener("partnerInboxAuthChanged",()=>setTimeout(()=>syncExistingPushSubscription().catch(e=>console.warn("[HYRULE notifications] auth-change registration failed:",e)),0));
   window.plannerNotificationsPanel=panel;
   window.plannerSaveAutoPrefs=saveAutoPrefs;
   window.plannerEnablePush=enablePush;
