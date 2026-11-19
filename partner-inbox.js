@@ -64,7 +64,7 @@
     if (state.client) return state.client;
     if (!window.supabase?.createClient) return null;
     state.client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-      auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
+      auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true, storageKey:"sb-yvoaqoldfqknwrrelswh-hyrule-auth" }
     });
     return state.client;
   }
@@ -463,6 +463,7 @@
         // duplicate message loads or realtime subscriptions.
         client.auth.onAuthStateChange((event, session) => {
           state.user = session?.user || null;
+          window.dispatchEvent(new Event("partnerInboxAuthChanged"));
           if (state.user) {
             startRealtime();
             if (event === "INITIAL_SESSION" || event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
